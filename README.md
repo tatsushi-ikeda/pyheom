@@ -16,7 +16,7 @@ There are no guarantees about backward compatibility as of now (Version 0.5).
 
 ## TODO
 
-- Write API documentations
+- Write API documentation
 - Rewrite codes for non-linear spectra calculations which are temporarily removed
 
 ## Required Packages
@@ -69,6 +69,3 @@ python3 setup.py install
 
 * This library has been developed and used in [the Scholes group](http://chemlabs.princeton.edu/scholes/) for projects supported by [the Gordon and Betty Moore Foundation](https://www.moore.org/).
 * A prototype of this library was developed for projects supported by [Japan Society for the Promotion of Science](https://www.jsps.go.jp/).
-
-
-****
