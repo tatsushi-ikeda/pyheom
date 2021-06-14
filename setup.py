@@ -11,7 +11,7 @@ import sys
 import os
 
 setup(name='pyheom',
-      version='0.5',
+      version='0.5.1',
       author='Tatsushi IKEDA',
       author_email='ikeda.tatsushi.37u@kyoto-u.jp',
       install_requires=['pylibheom>=0.5', 'numpy', 'scipy'],
