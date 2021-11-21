@@ -12,13 +12,12 @@ import scipy.sparse
 import itertools
 from collections import OrderedDict
 
-from pyheom.predefined_noise            import *
-from pyheom.summation_over_poles        import *
-from pyheom.commuting_matrix            import *
-from pyheom.pade_spectral_decomposition import *
+from .predefined_noise            import *
+from .summation_over_poles        import *
+from .commuting_matrix            import *
+from .pade_spectral_decomposition import *
 
-
-FSD_coeffs = {
+fsd_coeffs = {
     100.0:  [[1,  1.35486,   1.34275],
              [2,  5.50923,   0.880362],
              [3,  0.553793, -0.965783]],
@@ -112,7 +111,7 @@ def calc_noise_time_domain(J, T, type_LTC, **kwargs):
                 T_np1 = T_n*chi_FSD
                 coeff_0 += T_n - T_np1
                 T_n   = T_np1
-                for j, a, b in FSD_coeffs[chi_FSD]:
+                for j, a, b in fsd_coeffs[chi_FSD]:
                     coeffs.append([j, a, b, T_n])
             T_0 = T_n
         else:
@@ -140,6 +139,7 @@ def calc_noise_time_domain(J, T, type_LTC, **kwargs):
             poles[(T_n/a, j, 0)] = b*(T_n/a)**(2*j-1)
         
         n_list = [[a, b, m, n] for (a, m, n), b in poles.items()]
+        print(n_list)
         
         return calc_S_from_poles(J.poles, n_list), calc_A_from_poles(J.poles)
     else:
@@ -206,6 +206,7 @@ def calc_noise_params(S, A):
 def noise_decomposition(J, T, type_LTC, **kwargs):
     return calc_noise_params(*calc_noise_time_domain(J, T, type_LTC, **kwargs))
 
+# noise = calc_noise_params(*calc_noise_time_domain(None, T, 'PSD+FSD', n_PSD = 1, type_PSD = 'N/N', n_FSD_rec=1, chi_FSD=100.0))
 # noise = calc_noise_params(*calc_noise_time_domain(J, T, 'PSD+FSD',
 #                                                   n_PSD = 1, type_PSD = 'N/N',
 #                                                   n_FSD_rec=1, chi_FSD=100.0))

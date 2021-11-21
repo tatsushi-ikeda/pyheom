@@ -7,4 +7,4 @@
 # ------------------------------------------------------------------------
 
 from pylibheom import *
-from pyheom.pyheom import *
+from .pyheom import *

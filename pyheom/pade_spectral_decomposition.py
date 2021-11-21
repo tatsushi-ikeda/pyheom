@@ -9,17 +9,17 @@
 import numpy as np
 import cmath as cm
 
-def PSD(n, type_pade):
+def psd(n, type_pade):
     if   (type_pade == 'N/N'):
-        return PSD_n(n)
+        return psd_n(n)
     elif (type_pade == 'N-1/N'):
-        return PSD_nm1(n)
+        return psd_nm1(n)
     elif (type_pade == 'N+1/N'):
-        return PSD_np1(n)
+        return psd_np1(n)
     else:
         raise Exception('[Error] Undefined type_pade: {}'.format(type_pade))
 
-def PSD_n(n, dtype=np.float64):
+def psd_n(n, dtype=np.float64):
     if n == 0:
         return np.zeros(0), np.zeros(0), 1/12.0, 0.0
     
@@ -59,7 +59,7 @@ def PSD_n(n, dtype=np.float64):
     return xi, eta, R, T
 
 
-def PSD_nm1(n):
+def psd_nm1(n):
     if (n == 0):
         raise
     
@@ -100,7 +100,7 @@ def PSD_nm1(n):
     return xi_, eta_, R_, T_
 
 
-def PSD_np1(N):
+def psd_np1(N):
     if (N == 0):
         raise
     

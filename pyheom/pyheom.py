@@ -1,7 +1,6 @@
 # 
-# LibHEOM, version 0.5
-# Copyright (c) 2019-2020 Tatsushi Ikeda
-#
+# LibHEOM
+# Copyright (c) Tatsushi Ikeda
 # This library is distributed under BSD 3-Clause License.
 # See LINCENSE.txt for licence.
 # ------------------------------------------------------------------------
@@ -12,10 +11,11 @@ import numpy as np
 import scipy as sp
 import scipy.sparse
 import importlib
+
 pylibheom = importlib.import_module("pylibheom")
 from pyheom.noise_decomposition import *
 
-UNIT = enum.Enum('Unit',
+unit = enum.Enum('unit',
  '''dimensionless
     femtosecond
     picosecond
@@ -24,33 +24,33 @@ UNIT = enum.Enum('Unit',
 
 hbar__J_s = 1.05457180013e-34
 UNIT_ENERGY_VALUE__J = {
-    UNIT.wavenumber:   1.98644582441459e-23, # (299792458*100*6.62607004081e-34)
-    UNIT.electronvolt: 1.602176620898e-19,
+    unit.wavenumber:   1.98644582441459e-23, # (299792458*100*6.62607004081e-34)
+    unit.electronvolt: 1.602176620898e-19,
 };
 UNIT_TIME_VALUE__S = {
-    UNIT.femtosecond: 1.0e-15,
-    UNIT.picosecond:  1.0e-12,
+    unit.femtosecond: 1.0e-15,
+    unit.picosecond:  1.0e-12,
 }
 
-units = {'energy':UNIT.dimensionless,
-         'time':  UNIT.dimensionless}
+units = {'energy':unit.dimensionless,
+         'time':  unit.dimensionless}
 
 def calc_unit():
-    if (units['energy'] == UNIT.dimensionless or units['time'] == UNIT.dimensionless):
-        if (units['energy'] == UNIT.dimensionless and units['time'] == UNIT.dimensionless):
-            unit = 1.0
+    if (units['energy'] == unit.dimensionless or units['time'] == unit.dimensionless):
+        if (units['energy'] == unit.dimensionless and units['time'] == unit.dimensionless):
+            result = 1.0
         else:
             print('[Error] Unit mismatch error: Both unit_energy and unit_time should be dimensionless.', file=sys.stderr)
             sys.exit(1)
     else:
-        unit = (UNIT_ENERGY_VALUE__J[units['energy']]
+        result = (UNIT_ENERGY_VALUE__J[units['energy']]
                 *UNIT_TIME_VALUE__S[units['time']]
                 /hbar__J_s)
-    return unit
+    return result
 
 
 def get_coo_matrix(matrix):
-    impl_class_name = "CooMatrix"
+    impl_class_name = "coo_matrix"
     if   matrix.dtype == np.complex64:
         ipml_class_name += "_c"
     elif matrix.dtype == np.complex128:
@@ -69,7 +69,7 @@ def get_coo_matrix(matrix):
         coo.col,
         coo.data)
     
-class HEOM():
+class heom():
     '''
 
     Parameters
@@ -91,23 +91,23 @@ class HEOM():
                  gpu_device=None,
                  callback=lambda lidx: None,
                  callback_interval=1024):
-        impl_class_name = 'HEOM_z'
+        impl_class_name = 'heom_z'
 
         if   matrix_type == 'dense':
-            impl_class_name += 'D'
+            impl_class_name += 'd'
         elif matrix_type == 'sparse':
-            impl_class_name += 'S'
+            impl_class_name += 's'
         else:
             print('[Error] Unknown internal matrix type: {}.'.format(
                 matrix_type))
             sys.exit(1)
         
-        impl_class_name += 'L'
+        impl_class_name += 'l'
 
         if   hierarchy_connection == 'loop':
-            impl_class_name += 'L'
+            impl_class_name += 'l'
         elif hierarchy_connection == 'hierarchical-Liouville':
-            impl_class_name += 'H'
+            impl_class_name += 'h'
         else:
             print('[Error] Unknown internal hierarchy connection: {}.'.format(
                 hierarchy_connection))
@@ -115,10 +115,10 @@ class HEOM():
         
         if (not gpu_device is None):
             if getattr(pylibheom, 'support_gpu_parallelization'):
-                impl_class_name += '_GPU'
+                impl_class_name += '_gpu'
             else:
-                print('[Error] GPU parallelization is not supported.')
-                print('  Specified GPU device: {}.'.format(gpu_device))
+                print('[Error] gpu parallelization is not supported.')
+                print('  specified gpu device: {}.'.format(gpu_device))
                 sys.exit(1)
                 
         self.impl = getattr(pylibheom, impl_class_name)()
@@ -127,7 +127,7 @@ class HEOM():
             self.impl.set_device_number(gpu_device)
         
         self.n_state = H.shape[0]
-        self.impl.set_Hamiltonian(get_coo_matrix(H.astype(np.complex128)))
+        self.impl.set_hamiltonian(get_coo_matrix(H.astype(np.complex128)))
 
         n_noise = len(noises)
         self.impl.allocate_noises(n_noise)
@@ -155,8 +155,7 @@ class HEOM():
                                                  callback,
                                                  callback_interval)
         self.rho_h = np.zeros((self.n_state, self.n_state, self.n_hierarchy),
-                              dtype=np.complex128,
-                              order='F')
+                              dtype=np.complex128, order='F')
         
         self.impl.init_aux_vars(callback,
                                 callback_interval)
@@ -201,7 +200,7 @@ class HEOM():
                                  lambda t: callback(t, self.rho_h[:,:,0]))
 
 
-class Redfield():
+class redfield():
     '''
 
     Parameters
@@ -222,21 +221,21 @@ class Redfield():
                  gpu_device=None,
                  callback=lambda lidx: None,
                  callback_interval=1024):
-        impl_class_name = 'Redfield_z'
+        impl_class_name = 'redfield_z'
 
         if   matrix_type == 'dense':
-            impl_class_name += 'D'
+            impl_class_name += 'd'
         elif matrix_type == 'sparse':
-            impl_class_name += 'S'
+            impl_class_name += 's'
         else:
             print('[Error] Unknown internal matrix type: {}.'.format(
                 matrix_type))
             sys.exit(1)
 
         if   operator_space == 'Hilbert':
-            impl_class_name += 'H'
+            impl_class_name += 'h'
         elif operator_space == 'Liouville':
-            impl_class_name += 'L'
+            impl_class_name += 'l'
         else:
             print('[Error] Unknown internal operator space: {}.'.format(
                 operator_space))
@@ -244,10 +243,10 @@ class Redfield():
         
         if (not gpu_device is None):
             if support_gpu_parallelization:
-                impl_class_name += '_GPU'
+                impl_class_name += '_gpu'
             else:
-                print('[Error] GPU parallelization is not supported.')
-                print('  Specified GPU device: {}.'.format(gpu_device))
+                print('[Error] gpu parallelization is not supported.')
+                print('  specified gpu device: {}.'.format(gpu_device))
                 sys.exit(1)
         
         self.impl = getattr(pylibheom, impl_class_name)()
@@ -257,7 +256,7 @@ class Redfield():
         
         E, self.Z = np.linalg.eig(H)
         self.n_state = H.shape[0]
-        self.impl.set_Hamiltonian(get_coo_matrix(np.diag(E).astype(np.complex128)))
+        self.impl.set_hamiltonian(get_coo_matrix(np.diag(E).astype(np.complex128)))
         
 
         n_noise = len(noises)

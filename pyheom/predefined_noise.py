@@ -9,11 +9,11 @@
 import numpy as np
 import cmath as cm
 
-class Drudian:
+class drude:
     def __init__(self, eta, gamma_c):
         self.eta     = float(eta)
         self.gamma_c = float(gamma_c)
-        self.name = 'Drudian'
+        self.name = 'drude'
         self.poles = self.get_poles()
 
     def get_poles(self):
@@ -27,12 +27,12 @@ class Drudian:
         return eta*gamma_c**2*omega/(omega**2+gamma_c**2)
 
 
-class Brownian:
+class brown_white:
     def __init__(self, lambda_0, gamma_c, omega_0):
         self.lambda_0 = float(lambda_0)
         self.gamma_c  = float(gamma_c)
         self.omega_0  = float(omega_0)
-        self.name = 'Brownian'
+        self.name = 'brown_white'
         self.poles = self.get_poles()
 
     def get_poles(self):
@@ -70,15 +70,15 @@ class Brownian:
             /((omega_0**2 - omega**2)**2 + gamma_c**2*omega**2)
 
 
-class OverdampedBrownian(Drudian):
+class overdamped_brown(drude):
     def __init__(self, lambda_0, gamma_c, omega_0):
         self.gamma_c = float(omega_0**2/gamma_c)
         self.eta     = float(2*lambda_0/self.gamma_c)
-        self.name    = 'OverdampedBrownian'
+        self.name    = 'overdamped_brown'
         self.poles   = self.get_poles()
 
 
-class BrownianDrivenByDrudian:
+class brown_drude:
     def __init__(self, lambda_0, zeta, gamma_c, omega_0):
         self.lambda_0 = float(lambda_0)
         self.zeta     = float(zeta)
@@ -86,7 +86,7 @@ class BrownianDrivenByDrudian:
         self.omega_0  = float(omega_0)
     
     def get_name(self):
-        return 'BrownianDrivenByDrudian'
+        return 'brown_drude'
 
     def calc_r_k(self):
         lambda_0 = self.lambda_0
