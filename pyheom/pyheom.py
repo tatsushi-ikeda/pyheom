@@ -69,18 +69,6 @@ def get_coo_matrix(matrix):
         coo.data)
     
 class heom():
-    '''
-
-    Parameters
-    ---------
-    H : array_like
-    noises : list
-    max_tier : int
-    ---------
-
-    Reterns
-    ---------
-    '''
     def __init__(self,
                  H,
                  noises,
@@ -119,7 +107,7 @@ class heom():
                 print('[Error] gpu parallelization is not supported.')
                 print('  specified gpu device: {}.'.format(gpu_device))
                 sys.exit(1)
-                
+
         self.impl = getattr(pylibheom, impl_class_name)()
         
         if (not gpu_device is None):
@@ -200,18 +188,6 @@ class heom():
 
 
 class redfield():
-    '''
-
-    Parameters
-    ---------
-    H : array_like
-    noises : list
-    max_tier : int
-    ---------
-
-    Reterns
-    ---------
-    '''
     def __init__(self,
                  H,
                  noises,

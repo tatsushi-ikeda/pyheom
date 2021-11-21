@@ -26,7 +26,7 @@ fsd_coeffs = {
              [3,  3.39011,   0.626892]],
 }
 
-def calc_S_MSD(gamma_k, a_k, T, n_ltc):
+def calc_S_msd(gamma_k, a_k, T, n_ltc):
     def cot(x):
         return 1/np.tan(x)
     
@@ -75,14 +75,14 @@ def calc_S_MSD(gamma_k, a_k, T, n_ltc):
     
     return result
 
-def calc_noise_time_domain(J, T, type_LTC, **kwargs):
-    if (type_LTC == 'NONE'):
+def calc_noise_time_domain(J, T, type_ltc, **kwargs):
+    if (type_ltc == 'none'):
         n_list = [[0, T, 1, 0]]
 
         return calc_S_from_poles(J.poles, n_list), calc_A_from_poles(J.poles)
     
-    elif (type_LTC == 'MSD'):
-        n_MSD = kwargs['n_MSD']
+    elif (type_ltc == 'msd'):
+        n_msd = kwargs['n_msd']
         
         A = calc_A_from_poles(J.poles)
         
@@ -90,58 +90,57 @@ def calc_noise_time_domain(J, T, type_LTC, **kwargs):
         a_k     = np.zeros(len(A), dtype=np.complex128)
         for k, (gamma, l) in enumerate(A.keys()):
             if l != 0:
-                raise Exception('[Error] MSD accepts only first-order poles')
+                raise Exception('[Error] msd accepts only first-order poles')
             gamma_k[k] = gamma
             a_k[k]     = A[(gamma, 0)]
             
-        return calc_S_MSD(gamma_k, a_k, T, n_MSD), A
+        return calc_S_msd(gamma_k, a_k, T, n_msd), A
     
-    elif (type_LTC == 'PSD'  or type_LTC == 'PSD+FSD' ):
+    elif (type_ltc == 'psd'  or type_ltc == 'psd+fsd' ):
         coeffs = []
         coeff_0 = 0
         
-        if type_LTC == 'PSD+FSD':
-            n_FSD_rec = kwargs['n_FSD_rec']
-            chi_FSD   = kwargs['chi_FSD']
-            # calc FSD coeffs
+        if type_ltc == 'psd+fsd':
+            n_fsd_rec = kwargs['n_fsd_rec']
+            chi_fsd   = kwargs['chi_fsd']
+            # calc fsd coeffs
             T_n = T
-            for i in range(n_FSD_rec):
-                T_np1 = T_n*chi_FSD
+            for i in range(n_fsd_rec):
+                T_np1 = T_n*chi_fsd
                 coeff_0 += T_n - T_np1
                 T_n   = T_np1
-                for j, a, b in fsd_coeffs[chi_FSD]:
+                for j, a, b in fsd_coeffs[chi_fsd]:
                     coeffs.append([j, a, b, T_n])
             T_0 = T_n
         else:
             T_0 = T
         
-        # calc PSD coeffs
-        n_PSD    = kwargs['n_PSD']
-        type_PSD = kwargs['type_PSD']
-        xi, eta, R_1, T_3 = PSD(n_PSD, type_PSD)
+        # calc psd coeffs
+        n_psd    = kwargs['n_psd']
+        type_psd = kwargs['type_psd']
+        xi, eta, R_1, T_3 = psd(n_psd, type_psd)
         
         # collect poles
         poles = OrderedDict()
-        ## PSD poles
+        ## psd poles
         poles[(0, 1, 0)] = T_0
         if (R_1 != 0):
             poles[(0, 0, 0)] = R_1
         if (T_3 != 0):
             poles[(0, 0, 1)] = T_3
-        for p in range(n_PSD):
+        for p in range(n_psd):
             poles[(T_0*xi[p], 1, 0)] = 2*eta[p]*T_0
         
-        ## FSD poles
+        ## fsd poles
         poles[(0, 1, 0)] += coeff_0
         for j, a, b, T_n in coeffs:
             poles[(T_n/a, j, 0)] = b*(T_n/a)**(2*j-1)
         
         n_list = [[a, b, m, n] for (a, m, n), b in poles.items()]
-        print(n_list)
         
         return calc_S_from_poles(J.poles, n_list), calc_A_from_poles(J.poles)
     else:
-        raise Exception('[Error] Unknown LTC')
+        raise Exception('[Error] Unknown ltc')
 
 
 def calc_noise_params(S, A):
@@ -201,15 +200,15 @@ def calc_noise_params(S, A):
                 S_delta = S_delta,
                 a       = a_mat)
 
-def noise_decomposition(J, T, type_LTC, **kwargs):
-    return calc_noise_params(*calc_noise_time_domain(J, T, type_LTC, **kwargs))
+def noise_decomposition(J, T, type_ltc, **kwargs):
+    return calc_noise_params(*calc_noise_time_domain(J, T, type_ltc, **kwargs))
 
-# noise = calc_noise_params(*calc_noise_time_domain(None, T, 'PSD+FSD', n_PSD = 1, type_PSD = 'N/N', n_FSD_rec=1, chi_FSD=100.0))
-# noise = calc_noise_params(*calc_noise_time_domain(J, T, 'PSD+FSD',
-#                                                   n_PSD = 1, type_PSD = 'N/N',
-#                                                   n_FSD_rec=1, chi_FSD=100.0))
-# noise = calc_noise_params(*calc_noise_time_domain(J, T, 'PSD',
-#                                                   n_PSD = 1, type_PSD = 'N-1/N'))
-# noise = calc_noise_params(*calc_noise_time_domain(J, T, 'MSD',
-#                                                   n_MSD = 10))
+# noise = calc_noise_params(*calc_noise_time_domain(None, T, 'psd+fsd', n_psd = 1, type_psd = 'N/N', n_fsd_rec=1, chi_fsd=100.0))
+# noise = calc_noise_params(*calc_noise_time_domain(J, T, 'psd+fsd',
+#                                                   n_psd = 1, type_psd = 'N/N',
+#                                                   n_fsd_rec=1, chi_fsd=100.0))
+# noise = calc_noise_params(*calc_noise_time_domain(J, T, 'psd',
+#                                                   n_psd = 1, type_psd = 'N-1/N'))
+# noise = calc_noise_params(*calc_noise_time_domain(J, T, 'msd',
+#                                                   n_msd = 10))
 # noise = calc_noise_params(*calc_noise_time_domain(J, T, 'NONE'))

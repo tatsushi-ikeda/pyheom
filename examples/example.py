@@ -6,8 +6,8 @@ from sys import stdout, stderr
 import time
 
 import pyheom
-pyheom.units['energy'] = pyheom.UNIT.dimensionless
-pyheom.units['time']   = pyheom.UNIT.dimensionless
+pyheom.units['energy'] = pyheom.unit.dimensionless
+pyheom.units['time']   = pyheom.unit.dimensionless
 import tqdm
 
 lambda_0  = 0.01 # reorganization energy (dimensionless)
@@ -16,14 +16,14 @@ zeta      = 0.5  # damping constant      (dimensionless)
 T         = 1    # temperature           (dimensionless)
 max_tier  = 5
 
-J = pyheom.Brownian(lambda_0, zeta, omega_0)
+J = pyheom.brown(lambda_0, zeta, omega_0)
 
 corr_dict = pyheom.noise_decomposition(
     J,
     T = T,
-    type_LTC = 'PSD',
-    n_PSD = 1,
-    type_PSD = 'N-1/N')
+    type_ltc = 'psd',
+    n_psd = 1,
+    type_psd = 'N-1/N')
 
 n_state = 2
 
@@ -38,7 +38,7 @@ noises = [
     dict(V=V, C=corr_dict)
 ]
 
-h = pyheom.HEOM(H,
+h = pyheom.heom(H,
                 noises,
                 max_tier=max_tier,
                 # matrix_type='sparse',

@@ -25,12 +25,12 @@ class drude:
         return eta*gamma_c**2*omega/(omega**2+gamma_c**2)
 
 
-class brown_white:
+class brown:
     def __init__(self, lambda_0, gamma_c, omega_0):
         self.lambda_0 = float(lambda_0)
         self.gamma_c  = float(gamma_c)
         self.omega_0  = float(omega_0)
-        self.name = 'brown_white'
+        self.name = 'brown'
         self.poles = self.get_poles()
 
     def get_poles(self):

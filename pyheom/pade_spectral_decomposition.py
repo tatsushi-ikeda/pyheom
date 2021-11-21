@@ -7,6 +7,7 @@
 import numpy as np
 import cmath as cm
 
+
 def psd(n, type_pade):
     if   (type_pade == 'N/N'):
         return psd_n(n)
@@ -16,6 +17,7 @@ def psd(n, type_pade):
         return psd_np1(n)
     else:
         raise Exception('[Error] Undefined type_pade: {}'.format(type_pade))
+
 
 def psd_n(n, dtype=np.float64):
     if n == 0:
@@ -56,7 +58,6 @@ def psd_n(n, dtype=np.float64):
     
     return xi, eta, R, T
 
-
 def psd_nm1(n):
     if (n == 0):
         raise
@@ -80,7 +81,8 @@ def psd_nm1(n):
     lambda_eig_, _ = np.linalg.eigh(Lambda_)
     lambda_eig_.sort()
 
-    zeta_ = np.array([-2.0/l for l in lambda_eig_[0:n]])
+    with np.errstate(divide='ignore', invalid='ignore'):
+        zeta_ = np.array([-2.0/l for l in lambda_eig_[0:n]])
 
     R_ = 0.0
     
