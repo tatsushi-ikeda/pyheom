@@ -1,7 +1,5 @@
 # 
-# LibHEOM, version 0.6
-# Copyright (c) 2019-2020 Tatsushi Ikeda
-
+# LibHEOM: Copyright (c) Tatsushi Ikeda
 # This library is distributed under BSD 3-Clause License.
 # See LINCENSE.txt for licence.
 # ------------------------------------------------------------------------
@@ -14,7 +12,7 @@ setup(name='pyheom',
       version='0.6.0',
       author='Tatsushi IKEDA',
       author_email='ikeda.tatsushi.37u@kyoto-u.jp',
-      install_requires=['pylibheom>=0.5', 'numpy', 'scipy'],
+      install_requires=['pylibheom>=0.6', 'numpy', 'scipy'],
       packages=['pyheom'],
       package_dir={'pyheom':'pyheom'},
       zip_safe=False)
