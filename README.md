@@ -4,6 +4,9 @@
 
 # PyHEOM: Python 3 Library to Simulate Open Quantum Dynamics based on HEOM Theory
 
+[The current stable version is v0.5](https://github.com/tatsushi-ikeda/pyheom/tree/v0.5).
+Master branch could be unstable.
+
 ## Introduction
 
 `pyheom` is an open-source library that supports open quantum dynamics simulations based on the hierarchical equations of motion (HEOM) theory.
