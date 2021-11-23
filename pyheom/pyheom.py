@@ -119,8 +119,6 @@ class heom():
 
         n_noise = len(noises)
         self.impl.allocate_noises(n_noise)
-
-
         
         self.noises = []
         
@@ -161,8 +159,7 @@ class heom():
         self.rho_h = np.zeros((self.n_state, self.n_state, self.n_hierarchy),
                               dtype=np.complex128, order='F')
         
-        self.impl.init_aux_vars(lambda lidx: None,
-                                callback_interval)
+        self.impl.init_aux_vars()
         
     def construct_commutator(self,
                              x, coef_l, coef_r,
@@ -288,8 +285,7 @@ class redfield():
                             dtype=np.complex128,
                             order='F')
         
-        self.impl.init_aux_vars(callback,
-                                callback_interval)
+        self.impl.init_aux_vars()
         
     def construct_commutator(self,
                              x, coef_l, coef_r,
