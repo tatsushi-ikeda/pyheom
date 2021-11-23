@@ -77,7 +77,7 @@ class heom():
                  hierarchy_connection='loop',
                  hierarchy_filter=None,
                  gpu_device=None,
-                 callback=lambda lidx: None,
+                 callback=lambda lidx, est: None,
                  callback_interval=1024):
         impl_class_name = 'heom_z'
 
@@ -161,12 +161,12 @@ class heom():
         self.rho_h = np.zeros((self.n_state, self.n_state, self.n_hierarchy),
                               dtype=np.complex128, order='F')
         
-        self.impl.init_aux_vars(callback,
+        self.impl.init_aux_vars(lambda lidx: None,
                                 callback_interval)
         
     def construct_commutator(self,
                              x, coef_l, coef_r,
-                             callback=lambda lidx: None,
+                             callback=lambda lidx, est: None,
                              callback_interval=1024):
         x_coo = sp.sparse.coo_matrix(x)
         self.impl.construct_commutator(x_coo.shape[0],
