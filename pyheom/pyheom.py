@@ -75,6 +75,7 @@ class heom():
                  max_tier,
                  matrix_type='sparse',
                  hierarchy_connection='loop',
+                 hierarchy_filter=None,
                  gpu_device=None,
                  callback=lambda lidx: None,
                  callback_interval=1024):
@@ -119,28 +120,44 @@ class heom():
         n_noise = len(noises)
         self.impl.allocate_noises(n_noise)
 
+
+        
+        self.noises = []
+        
         for u in range(n_noise):
-            gamma   = noises[u]["C"]["gamma"]
-            phi_0   = noises[u]["C"]["phi_0"]
-            sigma   = noises[u]["C"]["sigma"]
-            s       = noises[u]["C"]["s"]
-            a       = noises[u]["C"]["a"]
-            S_delta = noises[u]["C"]["S_delta"]
+            gamma   = noises[u]["C"]["gamma"].astype(np.complex128)
+            phi_0   = noises[u]["C"]["phi_0"].astype(np.complex128)
+            sigma   = noises[u]["C"]["sigma"].astype(np.complex128)
+            s       = noises[u]["C"]["s"].astype(np.complex128)
+            a       = noises[u]["C"]["a"].astype(np.complex128)
+            S_delta = complex(noises[u]["C"]["S_delta"])
+            self.noises.append(type("noise", (object,),
+                                    dict(gamma=gamma,
+                                         phi_0=phi_0,
+                                         sigma_s=s.T@sigma,
+                                         sigma_a=a.T@sigma,
+                                         S_delta=S_delta)))
             self.impl.set_noise(u,
                                 get_coo_matrix(noises[u]["V"].astype(np.complex128)),
-                                get_coo_matrix(gamma.astype(np.complex128)),
-                                phi_0.astype(np.complex128),
-                                sigma.astype(np.complex128),
-                                get_coo_matrix(s.astype(np.complex128)),
-                                complex(S_delta),
-                                get_coo_matrix(a.astype(np.complex128)))
+                                get_coo_matrix(gamma),
+                                phi_0,
+                                sigma,
+                                get_coo_matrix(s),
+                                S_delta,
+                                get_coo_matrix(a))
 
+        if hierarchy_filter:
+            self.hierarchy_filter = lambda index, depth, lk: hierarchy_filter(index, depth, lk, self.noises)
+        else:
+            self.hierarchy_filter = lambda index, depth, lk, noises: True
 
         self.impl.flatten_hierarchy_dimension()
         self.n_hierarchy \
             = self.impl.allocate_hierarchy_space(max_tier,
                                                  callback,
-                                                 callback_interval)
+                                                 callback_interval,
+                                                 self.hierarchy_filter,
+                                                 False if hierarchy_filter is None else True)
         self.rho_h = np.zeros((self.n_state, self.n_state, self.n_hierarchy),
                               dtype=np.complex128, order='F')
         
@@ -164,7 +181,7 @@ class heom():
                                        callback_interval)
 
     def apply_commutator(self):
-        self.impl.apply_commutator(self.rho_h.ravel())
+        self.impl.apply_commutator(self.rho_h.ravel(order='F'))
 
     def set_rho(self, rho):
         self.rho_h[:,:,0] = rho[:,:]
@@ -177,6 +194,16 @@ class heom():
 
     def get_rho_h(self):
         return np.copy(self.rho_h[:,:,:])
+
+    def calc_diff(self, rho_h):
+        drho_h_dt = np.zeros_like(rho_h)
+        self.impl.calc_diff(drho_h_dt.ravel(order='F'),
+                            rho_h.ravel(order='F'),
+                            1, 0)
+        return drho_h_dt
+
+    def get_diff_func(self):
+        return lambda t, rho_h: self.calc_diff(rho_h)
 
     def time_evolution(self, dt__unit, count,
                        callback=lambda t, rho: None,
@@ -281,13 +308,23 @@ class redfield():
                                        callback_interval)
 
     def apply_commutator(self):
-        self.impl.apply_commutator(self.rho.ravel())
+        self.impl.apply_commutator(self.rho.ravel(order='F'))
         
     def set_rho(self, rho):
         self.rho[:,:] = (self.Z.T.conj())@rho[:,:]@(self.Z)
 
     def get_rho(self):
         return np.copy((self.Z)@self.rho[:,:]@(self.Z.T.conj()))
+
+    def calc_diff(self, rho):
+        drho_dt = np.zeros_like(rho)
+        self.impl.calc_diff(drho_dt.ravel(order='F'),
+                            rho_h.ravel(order='F'),
+                            1, 0)
+        return drho_dt
+    
+    def get_diff_func(self):
+        return lambda t, rho_h: self.calc_diff(rho_h)
 
     def time_evolution(self, dt__unit, count,
                        callback=lambda t, rho: None,
