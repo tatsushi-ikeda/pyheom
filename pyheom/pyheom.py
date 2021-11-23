@@ -74,8 +74,8 @@ class heom():
                  noises,
                  max_tier,
                  matrix_type='sparse',
-                 hierarchy_connection='loop',
-                 hierarchy_filter=None,
+                 hrchy_connection='loop',
+                 hrchy_filter=None,
                  gpu_device=None,
                  callback=lambda lidx, est: None,
                  callback_interval=1024):
@@ -92,13 +92,13 @@ class heom():
         
         impl_class_name += 'l'
 
-        if   hierarchy_connection == 'loop':
+        if   hrchy_connection == 'loop':
             impl_class_name += 'l'
-        elif hierarchy_connection == 'hierarchical-Liouville':
+        elif hrchy_connection == 'hierarchical-Liouville':
             impl_class_name += 'h'
         else:
-            print('[Error] Unknown internal hierarchy connection: {}.'.format(
-                hierarchy_connection))
+            print('[Error] Unknown hrchy_connection: {}.'.format(
+                hrchy_connection))
             sys.exit(1)
         
         if (not gpu_device is None):
@@ -118,7 +118,7 @@ class heom():
         self.impl.set_hamiltonian(get_coo_matrix(H.astype(np.complex128)))
 
         n_noise = len(noises)
-        self.impl.allocate_noises(n_noise)
+        self.impl.alloc_noises(n_noise)
         
         self.noises = []
         
@@ -144,19 +144,19 @@ class heom():
                                 S_delta,
                                 get_coo_matrix(a))
 
-        if hierarchy_filter:
-            self.hierarchy_filter = lambda index, depth, lk: hierarchy_filter(index, depth, lk, self.noises)
+        if hrchy_filter:
+            self.hrchy_filter = lambda index, depth, lk: hrchy_filter(index, depth, lk, self.noises)
         else:
-            self.hierarchy_filter = lambda index, depth, lk, noises: True
+            self.hrchy_filter = lambda index, depth, lk, noises: True
 
-        self.impl.flatten_hierarchy_dimension()
-        self.n_hierarchy \
-            = self.impl.allocate_hierarchy_space(max_tier,
-                                                 callback,
-                                                 callback_interval,
-                                                 self.hierarchy_filter,
-                                                 False if hierarchy_filter is None else True)
-        self.rho_h = np.zeros((self.n_state, self.n_state, self.n_hierarchy),
+        self.impl.linearize()
+        self.n_hrchy \
+            = self.impl.alloc_hrchy(max_tier,
+                                    callback,
+                                    callback_interval,
+                                    self.hrchy_filter,
+                                    False if hrchy_filter is None else True)
+        self.rho_h = np.zeros((self.n_state, self.n_state, self.n_hrchy),
                               dtype=np.complex128, order='F')
         
         self.impl.init_aux_vars()
@@ -202,13 +202,13 @@ class heom():
     def get_diff_func(self):
         return lambda t, rho_h: self.calc_diff(rho_h)
 
-    def time_evolution(self, dt__unit, count,
+    def solve(self, dt__unit, count,
                        callback=lambda t, rho: None,
                        callback_interval=1):
-        self.impl.time_evolution(self.rho_h.ravel(order='F'),
-                                 dt__unit, dt__unit*calc_unit(),
-                                 callback_interval, count//callback_interval,
-                                 lambda t: callback(t, self.rho_h[:,:,0]))
+        self.impl.solve(self.rho_h.ravel(order='F'),
+                        dt__unit, dt__unit*calc_unit(),
+                        callback_interval, count//callback_interval,
+                        lambda t: callback(t, self.rho_h[:,:,0]))
 
 
 class redfield():
@@ -259,7 +259,7 @@ class redfield():
         
 
         n_noise = len(noises)
-        self.impl.allocate_noises(n_noise)
+        self.impl.alloc_noises(n_noise)
         for u in range(n_noise):
             V = get_coo_matrix((self.Z.T.conj())@noises[u]["V"]@(self.Z).astype(np.complex128))
             if "func" in noises[u]["C"]:
@@ -322,10 +322,10 @@ class redfield():
     def get_diff_func(self):
         return lambda t, rho_h: self.calc_diff(rho_h)
 
-    def time_evolution(self, dt__unit, count,
+    def solve(self, dt__unit, count,
                        callback=lambda t, rho: None,
                        callback_interval=1):
-        self.impl.time_evolution(self.rho.ravel(order='F'),
-                                 dt__unit, dt__unit*calc_unit(),
-                                 callback_interval, count//callback_interval,
-                                 lambda t: callback(t, (self.Z)@self.rho[:,:]@(self.Z.T.conj())))
+        self.impl.solve(self.rho.ravel(order='F'),
+                        dt__unit, dt__unit*calc_unit(),
+                        callback_interval, count//callback_interval,
+                        lambda t: callback(t, (self.Z)@self.rho[:,:]@(self.Z.T.conj())))
