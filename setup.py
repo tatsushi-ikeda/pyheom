@@ -9,10 +9,10 @@ import sys
 import os
 
 setup(name='pyheom',
-      version='0.6.7',
+      version='0.6.10',
       author='Tatsushi IKEDA',
       author_email='ikeda.tatsushi.37u@kyoto-u.jp',
-      install_requires=['pylibheom>=0.6.7', 'numpy', 'scipy'],
+      install_requires=['pylibheom>=0.6.10', 'numpy', 'scipy'],
       packages=['pyheom'],
       package_dir={'pyheom':'pyheom'},
       zip_safe=False)

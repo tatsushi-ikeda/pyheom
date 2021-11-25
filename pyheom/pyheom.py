@@ -14,6 +14,9 @@ import importlib
 pylibheom = importlib.import_module("pylibheom")
 from pyheom.noise_decomposition import *
 
+version = getattr(pylibheom, 'version')()
+__version__ = version
+
 unit = enum.Enum('unit',
  '''dimensionless
     femtosecond
