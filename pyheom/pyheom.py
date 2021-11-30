@@ -81,7 +81,10 @@ class heom():
                  hrchy_filter=None,
                  gpu_device=None,
                  callback=lambda lidx, est: None,
-                 callback_interval=1024):
+                 callback_interval=1024,
+                 unrolling=False):
+        self.n_state = H.shape[0]
+        
         impl_class_name = 'heom_z'
 
         if   matrix_type == 'dense':
@@ -103,6 +106,9 @@ class heom():
             print('[Error] Unknown hrchy_connection: {}.'.format(
                 hrchy_connection))
             sys.exit(1)
+
+        if unrolling and self.n_state in [2, 3]:
+            impl_class_name += '_{}'.format(self.n_state)
         
         if (not gpu_device is None):
             if getattr(pylibheom, 'support_gpu_parallelization'):
@@ -117,7 +123,6 @@ class heom():
         if (not gpu_device is None):
             self.impl.set_device_number(gpu_device)
         
-        self.n_state = H.shape[0]
         self.impl.set_hamiltonian(get_coo_matrix(H.astype(np.complex128)))
 
         n_noise = len(noises)
@@ -222,7 +227,8 @@ class redfield():
                  operator_space='Liouville',
                  gpu_device=None,
                  callback=lambda lidx: None,
-                 callback_interval=1024):
+                 callback_interval=1024,
+                 unrolling=False):
         impl_class_name = 'redfield_z'
 
         if   matrix_type == 'dense':
@@ -242,6 +248,9 @@ class redfield():
             print('[Error] Unknown internal operator space: {}.'.format(
                 operator_space))
             sys.exit(1)
+        
+        if unrolling and self.n_state in [2, 3]:
+            impl_class_name += '_{}'.format(self.n_state)
         
         if (not gpu_device is None):
             if support_gpu_parallelization:
