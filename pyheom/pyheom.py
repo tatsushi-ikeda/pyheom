@@ -229,6 +229,8 @@ class redfield():
                  callback=lambda lidx: None,
                  callback_interval=1024,
                  unrolling=False):
+        self.n_state = H.shape[0]
+        
         impl_class_name = 'redfield_z'
 
         if   matrix_type == 'dense':
@@ -266,7 +268,6 @@ class redfield():
             self.impl.set_device_number(gpu_device)
         
         E, self.Z = np.linalg.eig(H)
-        self.n_state = H.shape[0]
         self.impl.set_hamiltonian(get_coo_matrix(np.diag(E).astype(np.complex128)))
         
 
@@ -327,12 +328,12 @@ class redfield():
     def calc_diff(self, rho):
         drho_dt = np.zeros_like(rho)
         self.impl.calc_diff(drho_dt.ravel(order='F'),
-                            rho_h.ravel(order='F'),
+                            ((self.Z.T.conj())@rho.reshape((self.n_state, self.n_state), order='F')@(self.Z)).ravel(order='F'),
                             1, 0)
-        return drho_dt
+        return ((self.Z)@drho_dt.reshape((self.n_state, self.n_state), order='F')@(self.Z.T.conj())).ravel(order='F')
     
     def get_diff_func(self):
-        return lambda t, rho_h: self.calc_diff(rho_h)
+        return lambda t, rho: self.calc_diff(rho)
 
     def solve(self, dt__unit, count,
                        callback=lambda t, rho: None,
