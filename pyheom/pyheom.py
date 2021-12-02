@@ -58,7 +58,7 @@ def get_coo_matrix(matrix):
     elif matrix.dtype == np.complex128:
         impl_class_name += "_z"
     else:
-        print('[Error] Unsupported matri type: {}.'.format(matrix.dtype),
+        print('[Error] Unsupported matrix type: {}.'.format(matrix.dtype),
               file=sys.stderr)
         sys.exit(1)
     coo = sp.sparse.coo_matrix(matrix)
@@ -228,7 +228,9 @@ class redfield():
                  gpu_device=None,
                  callback=lambda lidx: None,
                  callback_interval=1024,
-                 unrolling=False):
+                 unrolling=False,
+                 secular=False,
+                 H_c=None):
         self.n_state = H.shape[0]
         
         impl_class_name = 'redfield_z'
@@ -269,7 +271,11 @@ class redfield():
         
         E, self.Z = np.linalg.eig(H)
         self.impl.set_hamiltonian(get_coo_matrix(np.diag(E).astype(np.complex128)))
+        if H_c is None:
+            H_c = np.zeros_like(H)
         
+        self.impl.set_redfield_options(get_coo_matrix(self.Z.T.conj()@H_c@(self.Z).astype(np.complex128)),
+                                       secular)
 
         n_noise = len(noises)
         self.impl.alloc_noises(n_noise)
