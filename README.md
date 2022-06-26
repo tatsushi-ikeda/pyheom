@@ -4,13 +4,16 @@
 
 # PyHEOM: Python 3 Library to Simulate Open Quantum Dynamics based on HEOM Theory
 
-[The current stable version is v0.5](https://github.com/tatsushi-ikeda/pyheom/tree/v0.5).
-Master branch could be unstable.
+The current stable version is [v0.5](https://github.com/tatsushi-ikeda/pyheom/tree/v0.5). 
+
+Version [1.0 (alpha)](https://github.com/tatsushi-ikeda/pyheom/tree/develop) is under development. 
+The Master branch also could be unstable.
+
 
 ## Introduction
 
 `pyheom` is an open-source library that supports open quantum dynamics simulations based on the hierarchical equations of motion (HEOM) theory.
-This library is a wrapper of `libheom`, and provides high-level API.
+This library provides a python 3 binding of `libheom` (`pylibheom`) and high-level APIs.
 All future development will be handled in this repository.
 
 This library is still under development, and some optional functions are not implemented.
@@ -23,20 +26,34 @@ There are no guarantees about backward compatibility as of now (Version 0.6).
 
 ## Required Packages
 
--   libheom:
+-   Python 3.6 or later
+-   libheom and its dependent libraries:
     [https://github.com/tatsushi-ikeda/libheom](https://github.com/tatsushi-ikeda/libheom)
+-   pybind11:
+    [https://github.com/pybind/pybind11](https://github.com/pybind/pybind11)
 -   numpy:
     [https://numpy.org/](https://numpy.org/)
 -   scipy:
     [https://www.scipy.org/](https://www.scipy.org/)
+-   jinja2:
+    [https://jinja.palletsprojects.com](https://jinja.palletsprojects.com/en/3.1.x/)
 
 ## Installation
 
 Type the following command from the source tree directory:
 
 ```bash
-python3 setup.py install
+pip install .
 ```
+
+or
+
+```
+pip install git+https://github.com/tatsushi-ikeda/pyheom
+```
+
+You can specify arguments for cmake by using the environment variable `CMAKE_ARGS`.
+For details, see [INSTALL.md](INSTALL.md).
 
 ## Authors
 * **Tatsushi Ikeda** (ikeda.tatsushi.37u@kyoto-u.jp)
@@ -72,5 +89,5 @@ python3 setup.py install
 </p>
 
 -   A prototype of this library was developed for projects supported by [Japan Society for the Promotion of Science](https://www.jsps.go.jp/). 
-    The current version is being developed for projects supported by JSPS again.
+    The current version is being developed for projects funded by JSPS again.
 -   The version for the above research paper (v0.5) was developed in [the Scholes group](http://chemlabs.princeton.edu/scholes/) for projects supported by [the Gordon and Betty Moore Foundation](https://www.moore.org/).
