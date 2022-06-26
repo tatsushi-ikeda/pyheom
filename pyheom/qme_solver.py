@@ -29,8 +29,8 @@ class qme_solver:
     compulsory_args = []
     optional_args   = OrderedDict()
 
-    @staticmethod
-    def get_config(qme_name,
+    def get_config(self.
+                   qme_name,
                    engine,
                    solver,
                    dtype,
@@ -43,8 +43,8 @@ class qme_solver:
         c_dtype  = DTYPE_CHAR[dtype]
         c_format = FORMAT_CHAR[format.lower()]
         c_order  = ORDER_CHAR[c_contiguous]
-        c_space  = qme_solver.space_char[space.lower()]
-        if unrolling and engine.lower() == 'eigen' and n_level in [1,2,3,4]:
+        c_space  = self.space_char[space.lower()]
+        if unrolling and engine.lower() == 'eigen' and n_level in [2,]:
             c_level = f'{n_level}'
         else:
             c_level = 'n'
@@ -81,16 +81,16 @@ class qme_solver:
         self.dtype        = H.dtype
         self.n_level      = H.shape[0]
         self.c_contiguous = H.flags.c_contiguous
-        self.config  = qme_solver.get_config(self.qme_name,
-                                             engine,
-                                             solver,
-                                             self.dtype,
-                                             space,
-                                             format,
-                                             self.c_contiguous,
-                                             self.n_level,
-                                             unrolling,
-                                             order_liouville)
+        self.config  = self.get_config(self.qme_name,
+                                       engine,
+                                       solver,
+                                       self.dtype,
+                                       space,
+                                       format,
+                                       self.c_contiguous,
+                                       self.n_level,
+                                       unrolling,
+                                       order_liouville)
 
         self.engine_impl = qme_solver.get_class('{engine}', self.config)(
             *(dict(ENGINE_ARGS[engine], **engine_args).values())
