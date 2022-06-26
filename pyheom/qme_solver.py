@@ -29,7 +29,7 @@ class qme_solver:
     compulsory_args = []
     optional_args   = OrderedDict()
 
-    def get_config(self.
+    def get_config(self,
                    qme_name,
                    engine,
                    solver,
