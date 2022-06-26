@@ -4,8 +4,10 @@
 
 # PyHEOM: Python 3 Library to Simulate Open Quantum Dynamics based on HEOM Theory
 
-[The current stable version is v0.5](https://github.com/tatsushi-ikeda/pyheom/tree/v0.5).
-Master branch could be unstable.
+The current stable version is [v0.5](https://github.com/tatsushi-ikeda/libheom/tree/v0.5).
+
+Version [1.0 (alpha)](https://github.com/tatsushi-ikeda/libheom/tree/develop) is under development.
+The Master branch could be unstable.
 
 ## Introduction
 
