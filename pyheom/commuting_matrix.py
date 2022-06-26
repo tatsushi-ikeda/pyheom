@@ -1,8 +1,9 @@
-# 
-# LibHEOM: Copyright (c) Tatsushi Ikeda
-# This library is distributed under BSD 3-Clause License.
-# See LINCENSE.txt for licence.
-# ------------------------------------------------------------------------
+#  -*- mode:python -*-
+#  PyHEOM
+#  Copyright (c) Tatsushi Ikeda
+#  This library is distributed under BSD 3-Clause License.
+#  See LINCENSE.txt for licence.
+# ------------------------------------------------------------------------*/
 
 import numpy as np
 import scipy as sp
@@ -10,7 +11,8 @@ import scipy as sp
 def get_commuting_matrix(c_vec, gamma, sigma):
     N = gamma.shape[0]
     if N == 1:
-        return np.array([[c_vec[0]]])
+        # return np.array([[c_vec[0]]])
+        return np.array([[c_vec[0]/sigma[0]]])
     basis = np.zeros((N,N), dtype=np.complex128)
     gammaT_n = np.identity(N, dtype=np.complex128) # gamma**n
     for n in range(N):

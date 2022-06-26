@@ -1,8 +1,9 @@
-# 
-# LibHEOM: Copyright (c) Tatsushi Ikeda
-# This library is distributed under BSD 3-Clause License.
-# See LINCENSE.txt for licence.
-# ------------------------------------------------------------------------
+#  -*- mode:python -*-
+#  PyHEOM
+#  Copyright (c) Tatsushi Ikeda
+#  This library is distributed under BSD 3-Clause License.
+#  See LINCENSE.txt for licence.
+# ------------------------------------------------------------------------*/
 
 import numpy as np
 import scipy as sp
@@ -76,6 +77,8 @@ def calc_S_msd(gamma_k, a_k, T, n_ltc):
     return result
 
 def calc_noise_time_domain(J, T, type_ltc, **kwargs):
+    type_ltc = type_ltc.lower()
+    
     if (type_ltc == 'none'):
         n_list = [[0, T, 1, 0]]
 
@@ -196,9 +199,9 @@ def calc_noise_params(S, A):
     return dict(gamma   = gamma,
                 sigma   = sigma,
                 phi_0   = phi_0,
-                s       = s_mat,
-                S_delta = S_delta,
-                a       = a_mat)
+                S       = s_mat,
+                s_delta = S_delta,
+                A       = a_mat)
 
 def noise_decomposition(J, T, type_ltc, **kwargs):
     return calc_noise_params(*calc_noise_time_domain(J, T, type_ltc, **kwargs))
