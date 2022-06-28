@@ -63,7 +63,7 @@ void set_system_py(qme_base<dtype,order,linalg_engine>& obj,
   if (H_py.rows != H_py.cols) {
     throw std::runtime_error("[Error] Hamiltonian must be a square matrix");
   }
-  H_py.dump(obj.H_lil);
+  H_py.dump(obj.H);
   obj.n_level   = H_py.rows;
   obj.n_level_2 = H_py.rows*H_py.cols;
 }
@@ -95,22 +95,22 @@ void set_noise_py(qme_base<dtype,order,linalg_engine>& obj,
     throw std::runtime_error("[Error] Hamiltonian and noise operators must have the same dimension");
   }
   
-  V_py.dump(obj.V_lil[u]);
+  V_py.dump(obj.V[u]);
   
   obj.len_gamma[u] = static_cast<int>(gamma_py.rows);
-  gamma_py.dump(obj.gamma_lil[u]);
+  gamma_py.dump(obj.gamma[u]);
   
-  obj.phi_0[u].resize(phi_0.shape(0));
+  obj.phi_0[u].resize(obj.len_gamma[u]);
   std::copy_n(phi_0.data(), phi_0.shape(0), obj.phi_0[u].data());
   
   obj.sigma[u].resize(obj.len_gamma[u]);
   std::copy_n(sigma.data(), sigma.shape(0), obj.sigma[u].data());
   
-  S_py.dump(obj.S_lil[u]);
+  S_py.dump(obj.S[u]);
   
   obj.s_delta[u] = s_delta;
   
-  A_py.dump(obj.A_lil[u]);
+  A_py.dump(obj.A[u]);
 }
 
 
