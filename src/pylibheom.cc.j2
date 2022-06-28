@@ -19,24 +19,27 @@ using namespace libheom;
 namespace py = pybind11;
 
 template<typename dtype>
+using vector_py = py::array_t<dtype>;
+
+template<typename dtype>
 class coo_matrix_py
 {
  public:
   int rows;
   int cols;
   int nnz;
-  py::array_t<int> row;
-  py::array_t<int> col;
-  py::array_t<dtype>   data;
+  vector_py<int> row;
+  vector_py<int> col;
+  vector_py<dtype>   data;
 
   coo_matrix_py(int rows, int cols, int nnz,
-                py::array_t<int> row, py::array_t<int> col, py::array_t<dtype> data) :
+                vector_py<int> row, vector_py<int> col, vector_py<dtype> data) :
       rows(rows), cols(cols), nnz(nnz), row(row), col(col), data(data)
   {
     CALL_TRACE();
   }
 
-  template<bool order>
+  template<order_t order>
   void dump(lil_matrix<dynamic,dtype,order,nil>& mat)
   {
     CALL_TRACE();
@@ -52,7 +55,7 @@ class coo_matrix_py
 };
 
 
-template<typename dtype, bool order, typename linalg_engine>
+template<typename dtype, order_t order, typename linalg_engine>
 void set_system_py(qme_base<dtype,order,linalg_engine>& obj,
                    coo_matrix_py<dtype>& H_py)
 {
@@ -65,7 +68,7 @@ void set_system_py(qme_base<dtype,order,linalg_engine>& obj,
   obj.n_level_2 = H_py.rows*H_py.cols;
 }
 
-template<typename dtype, bool order, typename linalg_engine>
+template<typename dtype, order_t order, typename linalg_engine>
 void alloc_noises_py(qme_base<dtype,order,linalg_engine>& obj,
                      int n_noise)
 {
@@ -73,13 +76,13 @@ void alloc_noises_py(qme_base<dtype,order,linalg_engine>& obj,
   obj.alloc_noises(n_noise);
 }
 
-template<typename dtype, bool order, typename linalg_engine>
+template<typename dtype, order_t order, typename linalg_engine>
 void set_noise_py(qme_base<dtype,order,linalg_engine>& obj,
                   int u,
                   coo_matrix_py<dtype>& V_py,
                   coo_matrix_py<dtype>& gamma_py,
-                  py::array_t<dtype>    phi_0,
-                  py::array_t<dtype>    sigma,
+                  vector_py<dtype>    phi_0,
+                  vector_py<dtype>    sigma,
                   coo_matrix_py<dtype>& S_py,
                   dtype                 s_delta,
                   coo_matrix_py<dtype>& A_py)
@@ -108,19 +111,13 @@ void set_noise_py(qme_base<dtype,order,linalg_engine>& obj,
   obj.s_delta[u] = s_delta;
   
   A_py.dump(obj.A_lil[u]);
-
-  // std::cerr << "phi_0:" << obj.phi_0[u][0] << std::endl;
-  // std::cerr << "sigma:" << obj.sigma[u][0] << std::endl;
-  // std::cerr << "S_lil:" << obj.S_lil[u] << std::endl;
-  // std::cerr << "s_delta:" << obj.s_delta[u] << std::endl;
-  // std::cerr << "A_lil:" << obj.A_lil[u] << std::endl;
 }
 
 
-template<typename dtype, bool order, typename linalg_engine>
+template<typename dtype, order_t order, typename linalg_engine>
 void solve_py(qme_solver<dtype,order,linalg_engine>& obj,
-              py::array_t<dtype> rho,
-              py::array_t<real_t<dtype>> t_list,
+              vector_py<dtype> rho,
+              vector_py<real_t<dtype>> t_list,
               py::function& callback,
               const py::kwargs& kwargs_py)
 {
@@ -207,9 +204,9 @@ PYBIND11_MODULE(pylibheom, m)
   {% for dtype, dtype_symbol in types %}
   py::class_<coo_matrix_py<{{dtype}}>>(m, "coo_matrix_{{dtype_symbol}}")
       .def(py::init<int, int, int,
-                    py::array_t<int>,
-                    py::array_t<int>,
-                    py::array_t<{{dtype}}>>());
+                    vector_py<int>,
+                    vector_py<int>,
+                    vector_py<{{dtype}}>>());
 
   {%   for order, order_symbol in orders %}
   {%     for engine in engines %}
