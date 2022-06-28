@@ -17,8 +17,8 @@ class heom_solver(qme_solver):
     ]
     
     optional_args = OrderedDict(
-        n_inner_threads = environ.get('OMP_NUM_THREADS', cpu_count()),
-        n_outer_threads = 1,
+        n_inner_threads = 1,
+        n_outer_threads = int(environ.get('OMP_NUM_THREADS', cpu_count())),
     )
     
     space_char = {
