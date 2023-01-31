@@ -6,8 +6,8 @@
 
 The current stable version is [v0.5](https://github.com/tatsushi-ikeda/pyheom/tree/v0.5). 
 
-Version [1.0 (alpha)](https://github.com/tatsushi-ikeda/pyheom/tree/develop) is under development. 
-The Master branch also could be unstable.
+Version [1.0 (alpha)](https://github.com/tatsushi-ikeda/pyheom/tree/master) is under development and could be unstable.
+In some environments, v0.5 may work more efficiently.
 
 ## Introduction
 
@@ -54,13 +54,19 @@ pip install git+https://github.com/tatsushi-ikeda/pyheom
 You can specify arguments for cmake by using the environment variable `CMAKE_ARGS`.
 For details, see [INSTALL.md](INSTALL.md).
 
+This [Google Colaboratory example](https://colab.research.google.com/github/tatsushi-ikeda/pyheom/blob/develop/examples/pyheom_example_2level_cpu.ipynb) ([GPGPU version](https://colab.research.google.com/github/tatsushi-ikeda/pyheom/blob/develop/examples/pyheom_example_2level_gpu.ipynb)) may be helpful.
+
+<a href="https://colab.research.google.com/github/tatsushi-ikeda/pyheom/blob/develop/examples/pyheom_example_2level_cpu.ipynb">
+<img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab">
+</a>
+
 ## Authors
 * **Tatsushi Ikeda** (ikeda.tatsushi.37u@kyoto-u.jp)
 
 ## Licence
 [![license](https://img.shields.io/badge/license-New%20BSD-blue.svg)](http://en.wikipedia.org/wiki/BSD_licenses#3-clause_license_.28.22Revised_BSD_License.22.2C_.22New_BSD_License.22.2C_or_.22Modified_BSD_License.22.29)
 
-`libheom` is distributed under the BSD 3-clause License. See the `LICENSE.txt` file for details.
+`libheom` and `pyheom` are distributed under the BSD 3-clause License. See the `LICENSE.txt` file for details.
 
 ## Citation Information
 
