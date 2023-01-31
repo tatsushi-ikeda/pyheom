@@ -1,0 +1,289 @@
+/* -*- mode:c++ -*-
+ * PyHEOM
+ * Copyright (c) Tatsushi Ikeda
+ * This library is distributed under BSD 3-Clause License.
+ * See LINCENSE.txt for licence.
+ *------------------------------------------------------------------------*/
+
+#include <iostream>
+
+#include "libheom.h"
+
+#include <pybind11/pybind11.h>
+#include <pybind11/complex.h>
+#include <pybind11/functional.h>
+#include <pybind11/numpy.h>
+#include <pybind11/stl.h>
+
+using namespace libheom;
+namespace py = pybind11;
+
+template<typename dtype>
+using vector_py = py::array_t<dtype>;
+
+template<typename dtype>
+class coo_matrix_py
+{
+ public:
+  int rows;
+  int cols;
+  int nnz;
+  vector_py<int> row;
+  vector_py<int> col;
+  vector_py<dtype>   data;
+
+  coo_matrix_py(int rows, int cols, int nnz,
+                vector_py<int> row, vector_py<int> col, vector_py<dtype> data) :
+      rows(rows), cols(cols), nnz(nnz), row(row), col(col), data(data)
+  {
+    CALL_TRACE();
+  }
+
+  template<order_t order>
+  void dump(lil_matrix<dynamic,dtype,order,nil>& mat)
+  {
+    CALL_TRACE();
+    mat.clear();
+    const int* row_ptr = row.data();
+    const int* col_ptr = col.data();
+    const dtype* d   = data.data();
+    mat.set_shape(rows, cols);
+    for (int i = 0; i < nnz; ++i) {
+      mat.push(row_ptr[i], col_ptr[i], d[i]);
+    }
+  }
+};
+
+
+template<typename dtype, order_t order, typename linalg_engine>
+void set_system_py(qme_base<dtype,order,linalg_engine>& obj,
+                   coo_matrix_py<dtype>& H_py)
+{
+  CALL_TRACE();
+  if (H_py.rows != H_py.cols) {
+    throw std::runtime_error("[Error] Hamiltonian must be a square matrix");
+  }
+  H_py.dump(obj.H);
+  obj.n_level   = H_py.rows;
+  obj.n_level_2 = H_py.rows*H_py.cols;
+}
+
+template<typename dtype, order_t order, typename linalg_engine>
+void alloc_noises_py(qme_base<dtype,order,linalg_engine>& obj,
+                     int n_noise)
+{
+  CALL_TRACE();
+  obj.alloc_noises(n_noise);
+}
+
+template<typename dtype, order_t order, typename linalg_engine>
+void set_noise_py(qme_base<dtype,order,linalg_engine>& obj,
+                  int u,
+                  coo_matrix_py<dtype>& V_py,
+                  coo_matrix_py<dtype>& gamma_py,
+                  vector_py<dtype>    phi_0,
+                  vector_py<dtype>    sigma,
+                  coo_matrix_py<dtype>& S_py,
+                  dtype                 s_delta,
+                  coo_matrix_py<dtype>& A_py)
+{
+  CALL_TRACE();
+  if (V_py.rows != V_py.cols)   {
+    throw std::runtime_error("[Error] Noise operator must be a square matrix");
+  }
+  if (V_py.rows != obj.n_level) {
+    throw std::runtime_error("[Error] Hamiltonian and noise operators must have the same dimension");
+  }
+  
+  V_py.dump(obj.V[u]);
+  
+  obj.len_gamma[u] = static_cast<int>(gamma_py.rows);
+  gamma_py.dump(obj.gamma[u]);
+  
+  obj.phi_0[u].resize(obj.len_gamma[u]);
+  std::copy_n(phi_0.data(), phi_0.shape(0), obj.phi_0[u].data());
+  
+  obj.sigma[u].resize(obj.len_gamma[u]);
+  std::copy_n(sigma.data(), sigma.shape(0), obj.sigma[u].data());
+  
+  S_py.dump(obj.S[u]);
+  
+  obj.s_delta[u] = s_delta;
+  
+  A_py.dump(obj.A[u]);
+}
+
+
+template<typename dtype, order_t order, typename linalg_engine>
+void solve_py(qme_solver<dtype,order,linalg_engine>& obj,
+              vector_py<dtype> rho,
+              vector_py<real_t<dtype>> t_list,
+              py::function& callback,
+              const py::kwargs& kwargs_py)
+{
+  CALL_TRACE();
+  const auto &buff_info = t_list.request();
+  const auto &shape = buff_info.shape;
+  kwargs_t kwargs;
+
+  if (kwargs_py.contains("dt")) {
+    kwargs.insert(std::make_pair("dt", py::cast<real_t<dtype>>(kwargs_py["dt"])));
+  }
+  if (kwargs_py.contains("atol")) {
+    kwargs.insert(std::make_pair("atol", py::cast<real_t<dtype>>(kwargs_py["atol"])));
+  }
+  if (kwargs_py.contains("rtol")) {
+    kwargs.insert(std::make_pair("rtol", py::cast<real_t<dtype>>(kwargs_py["rtol"])));
+  }
+  obj.solve(rho.mutable_data(),
+            t_list.data(),
+            shape[0],
+            [&](real_t<dtype> t) {
+              if (PyErr_CheckSignals() != 0) {
+                throw py::error_already_set();
+              }
+              callback(t);
+            },
+            kwargs);
+}
+
+// from https://stackoverflow.com/questions/70589954/initialization-and-finalization-of-pybind-module
+class Module
+{
+ public:
+  Module()
+  {
+    std::set_terminate(terminate_handler);
+    struct sigaction action;
+    memset(&action, 0, sizeof(struct sigaction));
+    action.sa_flags = SA_SIGINFO;
+    action.sa_sigaction = sigsegv_handler;
+    sigaction(SIGSEGV, &action, NULL);
+  }
+  ~Module()
+  {
+
+  }
+};
+
+PYBIND11_MODULE(pylibheom, m)
+{
+  static Module module;
+
+  m.doc() = "document";
+
+  {% for engine in ["eigen", "mkl", "cuda"] %}
+  m.def("{{engine}}_is_supported", &is_supported<{{engine}}>);
+  {% endfor %}
+
+  // naming
+  // qme_zhdr2:
+  //    double precision
+  //    Hilbert space expression
+  //    dense matrix format  for operator matrices
+  //    row-major    packing for density and operator matrices
+  //    2-level system
+  // qme_clscrn:
+  //    single precision
+  //    Liouville space expression
+  //    sparse matrix format for operator and super-operator matrices
+  //    column-major packing for density and operator matrices
+  //    row-major    packing for super-operator matrices
+  //    n-level system
+
+  {% if "eigen" in engines %}
+  py::class_<eigen>(m, "eigen").def(py::init<>());
+  {% endif %}
+  {% if "mkl"   in engines %}
+  py::class_<mkl>(m, "mkl").def(py::init<>());
+  {% endif %}
+  {% if "cuda"  in engines %}
+  py::class_<cuda>(m, "cuda").def(py::init<int>());
+  {% endif %}
+
+  {% for dtype, dtype_symbol in types %}
+  py::class_<coo_matrix_py<{{dtype}}>>(m, "coo_matrix_{{dtype_symbol}}")
+      .def(py::init<int, int, int,
+                    vector_py<int>,
+                    vector_py<int>,
+                    vector_py<{{dtype}}>>());
+
+  {%   for order, order_symbol in orders %}
+  {%     for engine in engines %}
+  py::class_<qme_base<{{dtype}},{{order}},{{engine}}>>(m, "qme_{{dtype_symbol}}{{order_symbol}}_{{engine}}")
+          .def(py::init<>())
+          .def("set_system",   &set_system_py<{{dtype}},{{order}},{{engine}}>)
+          .def("alloc_noises", &alloc_noises_py<{{dtype}},{{order}},{{engine}}>)
+          .def("set_noise",    &set_noise_py<{{dtype}},{{order}},{{engine}}>);
+
+  py::class_<solver_base<{{dtype}},{{order}},{{engine}}>>(m, "solver_{{dtype_symbol}}{{order_symbol}}_{{engine}}")
+      .def(py::init<>());
+
+  py::class_<qme_solver<{{dtype}},{{order}},{{engine}}>>(m, "qme_solver_{{dtype_symbol}}{{order_symbol}}_{{engine}}")
+      .def(py::init<{{engine}}*, qme_base<{{dtype}},{{order}},{{engine}}>*, solver_base<{{dtype}},{{order}},{{engine}}>*>())
+      .def("solve", &solve_py<{{dtype}},{{order}},{{engine}}>);
+
+  {%       for format, format_symbol in formats %}
+  {%         for num, num_symbol in num_list[engine] %}
+  // redfield_hilb
+  py::class_<redfield_hilb<{{num}},{{dtype}},libheom::{{format}},{{order}},{{engine}}>,qme_base<{{dtype}},{{order}},{{engine}}>>(
+      m, "redfield_{{dtype_symbol}}h{{format_symbol}}{{order_symbol}}{{num_symbol}}_{{engine}}"
+  )
+       .def(py::init<>())
+      .def("set_param", &redfield_hilb<{{num}},{{dtype}},libheom::{{format}},{{order}},{{engine}}>::set_param);
+
+  // redfield_liou
+  {%           for order_liou, order_liou_symbol in orders %}
+  py::class_<redfield_liou<{{num}},{{dtype}},libheom::{{format}},{{order}},{{order_liou}},{{engine}}>,qme_base<{{dtype}},{{order}},{{engine}}>>(
+      m, "redfield_{{dtype_symbol}}l{{format_symbol}}{{order_symbol}}{{order_liou_symbol}}{{num_symbol}}_{{engine}}"
+  )
+      .def(py::init<>())
+      .def("set_param",  &redfield_liou<{{num}},{{dtype}},libheom::{{format}},{{order}},{{order_liou}},{{engine}}>::set_param);
+  {%           endfor %}
+
+  // heom_hilb
+  py::class_<heom_hilb<{{num}},{{dtype}},libheom::{{format}},{{order}},{{engine}}>,qme_base<{{dtype}},{{order}},{{engine}}>>(
+      m, "heom_{{dtype_symbol}}h{{format_symbol}}{{order_symbol}}{{num_symbol}}_{{engine}}"
+  )
+      .def(py::init<int, int, int>())
+      .def("set_param",   &heom_hilb<{{num}},{{dtype}},libheom::{{format}},{{order}},{{engine}}>::set_param)
+      .def("get_n_hrchy", &heom<{{dtype}},{{order}},{{engine}}>::get_n_hrchy);
+
+  // heom_liou
+  {%           for order_liou, order_liou_symbol in orders %}
+  py::class_<heom_liou<{{num}},{{dtype}},libheom::{{format}},{{order}},{{order_liou}},{{engine}}>,qme_base<{{dtype}},{{order}},{{engine}}>>(
+      m, "heom_{{dtype_symbol}}l{{format_symbol}}{{order_symbol}}{{order_liou_symbol}}{{num_symbol}}_{{engine}}"
+  )
+      .def(py::init<int, int, int>())
+      .def("set_param",   &heom_liou<{{num}},{{dtype}},libheom::{{format}},{{order}},{{order_liou}},{{engine}}>::set_param)
+      .def("get_n_hrchy", &heom<{{dtype}},{{order}},{{engine}}>::get_n_hrchy);
+  {%           endfor %}
+
+  // heom_ado
+  {%           for order_liou, order_liou_symbol in orders %}
+  py::class_<heom_ado<{{num}},{{dtype}},libheom::{{format}},{{order}},{{order_liou}},{{engine}}>,qme_base<{{dtype}},{{order}},{{engine}}>>(
+      m, "heom_{{dtype_symbol}}a{{format_symbol}}{{order_symbol}}{{order_liou_symbol}}{{num_symbol}}_{{engine}}"
+  )
+      .def(py::init<int, int, int>())
+      .def("set_param",   &heom_ado<{{num}},{{dtype}},libheom::{{format}},{{order}},{{order_liou}},{{engine}}>::set_param)
+      .def("get_n_hrchy", &heom<{{dtype}},{{order}},{{engine}}>::get_n_hrchy);
+  {%           endfor %}
+  
+  {%         endfor %}
+  {%       endfor %}
+
+  py::class_<rk4<{{dtype}},{{order}},{{engine}}>,solver_base<{{dtype}},{{order}},{{engine}}>>(m, "rk4_{{dtype_symbol}}{{order_symbol}}_{{engine}}")
+      .def(py::init<>());
+
+  py::class_<lsrk4<{{dtype}},{{order}},{{engine}}>,solver_base<{{dtype}},{{order}},{{engine}}>>(m, "lsrk4_{{dtype_symbol}}{{order_symbol}}_{{engine}}")
+      .def(py::init<>());
+
+  py::class_<rkdp<{{dtype}},{{order}},{{engine}}>,solver_base<{{dtype}},{{order}},{{engine}}>>(m, "rkdp_{{dtype_symbol}}{{order_symbol}}_{{engine}}")
+      .def(py::init<>());
+
+
+  {%     endfor %}
+  {%   endfor %}
+  {% endfor %}
+
+}

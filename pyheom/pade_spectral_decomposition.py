@@ -1,23 +1,23 @@
-# 
-# LibHEOM: Copyright (c) Tatsushi Ikeda
-# This library is distributed under BSD 3-Clause License.
-# See LINCENSE.txt for licence.
-# ------------------------------------------------------------------------
+#  -*- mode:python -*-
+#  PyHEOM
+#  Copyright (c) Tatsushi Ikeda
+#  This library is distributed under BSD 3-Clause License.
+#  See LINCENSE.txt for licence.
+# ------------------------------------------------------------------------*/
 
 import numpy as np
 import cmath as cm
 
-
 def psd(n, type_pade):
-    if   (type_pade == 'N/N'):
+    type_pade = type_pade.lower()
+    if   (type_pade == 'n/n'):
         return psd_n(n)
-    elif (type_pade == 'N-1/N'):
+    elif (type_pade == 'n-1/n'):
         return psd_nm1(n)
-    elif (type_pade == 'N+1/N'):
+    elif (type_pade == 'n+1/n'):
         return psd_np1(n)
     else:
         raise Exception('[Error] Undefined type_pade: {}'.format(type_pade))
-
 
 def psd_n(n, dtype=np.float64):
     if n == 0:
