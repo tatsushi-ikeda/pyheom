@@ -9,7 +9,6 @@ The current stable version is [v0.5](https://github.com/tatsushi-ikeda/pyheom/tr
 Version [1.0 (alpha)](https://github.com/tatsushi-ikeda/pyheom/tree/develop) is under development. 
 The Master branch also could be unstable.
 
-
 ## Introduction
 
 `pyheom` is an open-source library that supports open quantum dynamics simulations based on the hierarchical equations of motion (HEOM) theory.
