@@ -54,6 +54,12 @@ pip install git+https://github.com/tatsushi-ikeda/pyheom
 You can specify arguments for cmake by using the environment variable `CMAKE_ARGS`.
 For details, see [INSTALL.md](INSTALL.md).
 
+This [Google Colaboratory example](https://colab.research.google.com/github/tatsushi-ikeda/pyheom/blob/develop/examples/pyheom_example_2level_cpu.ipynb) may be helpful.
+
+<a href="https://colab.research.google.com/github/tatsushi-ikeda/pyheom/blob/develop/examples/pyheom_example_2level_cpu.ipynb">
+<img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab">
+</a>
+
 ## Authors
 * **Tatsushi Ikeda** (ikeda.tatsushi.37u@kyoto-u.jp)
 
