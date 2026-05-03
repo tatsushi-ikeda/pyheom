@@ -9,6 +9,10 @@ import numpy as np
 import cmath as cm
 
 def psd(n, type_pade):
+    """Pade spectral decomposition of the Bose-Einstein distribution into n pole pairs.
+
+    type_pade: 'N/N', 'N-1/N', or 'N+1/N' -- selects the Pade approximant variant.
+    """
     type_pade = type_pade.lower()
     if   (type_pade == 'n/n'):
         return psd_n(n)

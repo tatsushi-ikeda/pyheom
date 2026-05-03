@@ -10,6 +10,10 @@ from os import environ
 from multiprocessing import cpu_count
 
 class heom_solver(qme_solver):
+    """Hierarchical equations of motion (HEOM) solver.
+
+    n_tiers controls the hierarchy truncation depth.
+    """
     qme_name = 'heom'
 
     compulsory_args = [
@@ -18,7 +22,8 @@ class heom_solver(qme_solver):
     
     optional_args = OrderedDict(
         n_inner_threads = 1,
-        n_outer_threads = int(environ.get('OMP_NUM_THREADS', cpu_count())),
+        # U1: evaluated at construction time (not at module import) via callable default
+        n_outer_threads = lambda: int(environ.get('OMP_NUM_THREADS', cpu_count())),
     )
     
     space_char = {

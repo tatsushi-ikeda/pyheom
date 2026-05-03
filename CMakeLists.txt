@@ -15,6 +15,7 @@ set(PROJECT_VERSION ${VER})
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+enable_testing()
 add_subdirectory(exts/libheom)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/exts/libheom/cmake)
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_BINARY_DIR}/exts/libheom/cmake)

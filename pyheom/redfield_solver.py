@@ -8,6 +8,7 @@
 from .qme_solver import *
 
 class redfield_solver(qme_solver):
+    """Redfield master equation solver (Born-Markov approximation, no ADO hierarchy)."""
     qme_name = 'redfield'
 
     def storage_size(self):

@@ -21,3 +21,5 @@ build/*
 dist/*
 test/*
 *.egg-info/*
+gmon.out
+__pycache__/

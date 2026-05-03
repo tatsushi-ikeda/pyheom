@@ -6,7 +6,6 @@
 # ------------------------------------------------------------------------*/
 
 import enum
-from sys import stderr, exit
 
 unit = enum.Enum('unit',
  '''dimensionless
@@ -26,18 +25,17 @@ UNIT_TIME_VALUE__S = {
     unit.picosecond:  1.0e-12,
 }
 
-units = {'energy':unit.dimensionless,
-         'time':  unit.dimensionless}
-
-def calc_unit():
-    if (units['energy'] == unit.dimensionless or units['time'] == unit.dimensionless):
-        if (units['energy'] == unit.dimensionless and units['time'] == unit.dimensionless):
-            result = 1.0
-        else:
-            print('[Error] Unit mismatch error: Both unit_energy and unit_time should be dimensionless.', file=stderr)
-            exit(1)
-    else:
-        result = (UNIT_ENERGY_VALUE__J[units['energy']]
-                *UNIT_TIME_VALUE__S[units['time']]
-                /hbar__J_s)
-    return result
+def calc_unit_from_dict(d):
+    """Compute the unit conversion factor from a `{'energy': ..., 'time': ...}` dict."""
+    energy = d['energy']
+    time   = d['time']
+    if (energy == unit.dimensionless) != (time == unit.dimensionless):
+        raise ValueError(
+            "Unit mismatch: 'energy' and 'time' must both be dimensionless or both have units "
+            f"(got energy={energy}, time={time})"
+        )
+    if energy == unit.dimensionless:
+        return 1.0
+    return (UNIT_ENERGY_VALUE__J[energy]
+            * UNIT_TIME_VALUE__S[time]
+            / hbar__J_s)

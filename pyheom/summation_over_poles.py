@@ -10,24 +10,11 @@ import scipy as sp
 import scipy.special
 from collections import OrderedDict
 
-def calc_A_from_poles(poles):
-    """Calculate:
+def calc_a_from_poles(poles):
+    """Compute A(t) = -1/pi integral_0^inf f(omega) sin(omegat) domega analytically from rational poles.
 
-    .. math:
-        A(t)=-\frac{1/\pi}\int_{0}^{\infty}d\omega f(\omega )\sin(\omega t),
-
-    where the function f is constructed from poles = [(a, b, m, n), ...] as
-
-    .. math:
-        f(\omega)=\sum\frac{b\omega^{2n+1}}{(a^2+\omega^2)^m}.
-
-    Here, a != 0 and m > n. m and n should be non-negative integers.
-
-    The result is expressed as an OrderdDict  {(a, l): c, ...}, which represents a function
-
-    .. math:
-       A(t)=\sum c\cdot t^l\exp(-at).
-
+    Each pole entry is [a, b, m, n] encoding f(omega) += b omega^(2n+1) / (a^2+omega^2)^m.
+    Returns OrderedDict {(a, l): c} representing A(t) = Sigma c t^l exp(-a t).
     """
     result = OrderedDict()
     
@@ -59,35 +46,11 @@ def calc_A_from_poles(poles):
     return result
 
 
-def calc_S_from_poles(poles_1, poles_2):
-    """Calculate:
+def calc_s_from_poles(poles_1, poles_2):
+    """Compute S(t) = 2/pi integral_0^inf f(omega) g(omega) cos(omegat) domega analytically from rational poles.
 
-    .. math:
-        S(t)=\frac{2/\pi}\int_{0}^{\infty}d\omega f(\omega )g(\omega)\cos(\omega t),
-
-    where the function f and g is constructed from poles_1 = [(a, b, m, n), ...] and poles_2 = [(a', b', m', n'), ...] as
-
-    .. math:
-        f(\omega)=\sum\frac{b\omega^{2n+1}}{(a^2+\omega^2)^m}
-
-    and
-    
-    .. math:
-        g(\omega)=\sum\frac{b'\omega^{2n'+1}}{(a'^2+\omega^2)^m'}.
-
-    Here, m, n, m', and n should be non-negative integers.  Regarding
-    pole_1, a != 0 and m > n.  Regarding pole_2, when a' != 0 then m'
-    > n'. When a' == 0, (m', n') = (1, 0), (0, 0), or (0, 1).
-
-    The result is expressed as an OrderedDict {(a, l): c, ...}, which represents a function
-
-    .. math:
-       A(t)=\sum \begin{dcases}
-    c\cdot 2\delta(t) & (a = \infty~\text{and}~l = 0)\\
-    c\cdot 2\ddot{\delta}(t) & (a = \infty~\text{and}~l = 2)\\
-    ct^l\exp(-at) & (\text{otherwise}).
-    \end{dcases}
-
+    poles_1 encodes f (spectral density poles); poles_2 encodes g (Bose-Einstein or LTC poles).
+    Returns OrderedDict {(a, l): c}; entries with a=inf represent delta-function contributions.
     """
 
     result = OrderedDict()
@@ -154,7 +117,7 @@ def calc_S_from_poles(poles_1, poles_2):
                                       *a**(2*(N - M) + l + 1)
                                       *inner1)
                     else:
-                        raise Exception('[Error] An invalid pole is given to calc_S_from_poles')
+                        raise ValueError('An invalid pole is given to calc_s_from_poles')
                 if (a == a_):
                     sub(a, b, b_, m + m_, n + n_ + 1)
                 else:
@@ -165,7 +128,7 @@ def calc_S_from_poles(poles_1, poles_2):
                     elif (m_ == 0 and n_ == 1):
                         sub(a, b, b_, m, n + 2)
                     else:
-                        raise Exception('[Error] An invalid pole is given to calc_S_from_poles')
+                        raise ValueError('An invalid pole is given to calc_s_from_poles')
             else:
                 def sub(a, b, m, n, a_, b_, m_, n_):
                     for l in range(m):

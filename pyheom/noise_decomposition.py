@@ -10,11 +10,27 @@ import scipy as sp
 import scipy.sparse
 import itertools
 from collections import OrderedDict
+from dataclasses import dataclass, field
 
 from .predefined_noise            import *
 from .summation_over_poles        import *
 from .commuting_matrix            import *
 from .pade_spectral_decomposition import *
+
+
+@dataclass
+class BathCorrelation:
+    """Bath correlation function decomposed into K exponential modes.
+
+    Returned by :func:`noise_decomposition`.  Set ``V`` before passing to a solver.
+    """
+    gamma:   object         # scipy.sparse (K,K)
+    sigma:   np.ndarray     # (K,)
+    phi_0:   np.ndarray     # (K,)
+    s_mat:   object         # scipy.sparse (K,K)
+    a_mat:   object         # scipy.sparse (K,K)
+    s_delta: complex = 0.0
+    V:       object = None  # set by user
 
 fsd_coeffs = {
     100.0:  [[1,  1.35486,   1.34275],
@@ -27,7 +43,7 @@ fsd_coeffs = {
              [3,  3.39011,   0.626892]],
 }
 
-def calc_S_msd(gamma_k, a_k, T, n_ltc):
+def calc_s_msd(gamma_k, a_k, T, n_ltc):
     def cot(x):
         return 1/np.tan(x)
     
@@ -36,7 +52,7 @@ def calc_S_msd(gamma_k, a_k, T, n_ltc):
     
     nu_k    = np.zeros(n_k)
     s_k     = np.zeros(n_m + n_k, dtype=a_k.dtype)
-    S_delta = 0.0
+    s_delta = 0.0
     
     for k in range(n_k):
         nu_k[k] = 2*np.pi*(k + 1)*T
@@ -57,7 +73,7 @@ def calc_S_msd(gamma_k, a_k, T, n_ltc):
         inner = 1/gamma_k[m]**2 - 1/(2*T*gamma_k[m])*cot(gamma_k[m]/(2*T))
         for k in range(n_k):
             inner -= 2/(nu_k[k]**2 - gamma_k[m]**2)
-        S_delta += -2*T*a_k[m]*inner
+        s_delta += -2*T*a_k[m]*inner
     
     result = OrderedDict()
 
@@ -67,7 +83,7 @@ def calc_S_msd(gamma_k, a_k, T, n_ltc):
         else:
             result[(a, m)] = coeff
 
-    put_coeff(np.inf, 0, S_delta)
+    put_coeff(np.inf, 0, s_delta)
     for k in range(n_m):
         put_coeff(gamma_k[k], 0, s_k[k])
 
@@ -77,17 +93,21 @@ def calc_S_msd(gamma_k, a_k, T, n_ltc):
     return result
 
 def calc_noise_time_domain(J, T, type_ltc, **kwargs):
+    """Return (S, A) pole dicts for the symmetric/antisymmetric bath correlation functions.
+
+    type_ltc: 'none' (no LTC), 'msd' (Matsubara), 'psd' (Pade), or 'psd+fsd'.
+    """
     type_ltc = type_ltc.lower()
     
     if (type_ltc == 'none'):
         n_list = [[0, T, 1, 0]]
 
-        return calc_S_from_poles(J.poles, n_list), calc_A_from_poles(J.poles)
+        return calc_s_from_poles(J.poles, n_list), calc_a_from_poles(J.poles)
     
     elif (type_ltc == 'msd'):
         n_msd = kwargs['n_msd']
         
-        A = calc_A_from_poles(J.poles)
+        A = calc_a_from_poles(J.poles)
         
         gamma_k = np.zeros(len(A), dtype=np.complex128)
         a_k     = np.zeros(len(A), dtype=np.complex128)
@@ -97,7 +117,7 @@ def calc_noise_time_domain(J, T, type_ltc, **kwargs):
             gamma_k[k] = gamma
             a_k[k]     = A[(gamma, 0)]
             
-        return calc_S_msd(gamma_k, a_k, T, n_msd), A
+        return calc_s_msd(gamma_k, a_k, T, n_msd), A
     
     elif (type_ltc == 'psd'  or type_ltc == 'psd+fsd' ):
         coeffs = []
@@ -141,12 +161,13 @@ def calc_noise_time_domain(J, T, type_ltc, **kwargs):
         
         n_list = [[a, b, m, n] for (a, m, n), b in poles.items()]
         
-        return calc_S_from_poles(J.poles, n_list), calc_A_from_poles(J.poles)
+        return calc_s_from_poles(J.poles, n_list), calc_a_from_poles(J.poles)
     else:
         raise Exception('[Error] Unknown ltc')
 
 
 def calc_noise_params(S, A):
+    """Convert (S, A) pole dicts to a BathCorrelation via the commuting-matrix construction."""
 
     # Calculate Basis Degeneracy
     phi_deg_dict = OrderedDict()
@@ -192,18 +213,36 @@ def calc_noise_params(S, A):
             = get_commuting_matrix(a_vec[ctr-block_size:ctr],
                                    gamma[ctr-block_size:ctr, ctr-block_size:ctr].todense(),
                                    sigma[ctr-block_size:ctr])
-    S_delta = 0.0
+    s_delta = 0.0
     if (np.inf, 0) in S:
-        S_delta = S[(np.inf, 0)]
-    
-    return dict(gamma   = gamma,
-                sigma   = sigma,
-                phi_0   = phi_0,
-                S       = s_mat,
-                s_delta = S_delta,
-                A       = a_mat)
+        s_delta = S[(np.inf, 0)]
+
+    return BathCorrelation(
+        gamma   = gamma,
+        sigma   = sigma,
+        phi_0   = phi_0,
+        s_mat   = s_mat,
+        s_delta = s_delta,
+        a_mat   = a_mat,
+    )
 
 def noise_decomposition(J, T, type_ltc, **kwargs):
+    """Decompose the bath correlation function of J into exponential modes.
+
+    Parameters
+    ----------
+    J : SpectralDensity
+        Spectral density model (e.g. `Drude`, `Brown`).
+    T : float
+        Temperature.
+    type_ltc : {'none', 'msd', 'psd', 'psd+fsd'}
+        Low-temperature correction. 'none' keeps only the spectral density poles.
+
+    Returns
+    -------
+    BathCorrelation
+        Set `.V` (system-bath coupling) before passing to a solver.
+    """
     return calc_noise_params(*calc_noise_time_domain(J, T, type_ltc, **kwargs))
 
 # noise = calc_noise_params(*calc_noise_time_domain(None, T, 'psd+fsd', n_psd = 1, type_psd = 'N/N', n_fsd_rec=1, chi_fsd=100.0))
