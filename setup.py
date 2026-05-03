@@ -137,6 +137,9 @@ setup(
     ext_modules=[CMakeExtension("pyheom.pylibheom")],
     cmdclass={"build_ext": CMakeBuild},
     install_requires=['numpy', 'scipy', 'jinja2'],
+    extras_require={
+        'benchmark': ['pytest-benchmark'],
+    },
     python_requires='>=3.9',
     zip_safe=False
 )
