@@ -35,6 +35,8 @@ corr = noise_decomposition(J, T=T, type_ltc='psd', n_psd=1, type_psd='n-1/n')
 corr.V = V
 
 # --- solver setup ---
+# Engine, space, and format can be selected automatically with:
+#   qme = HEOMSolver.auto(H, [corr], n_tiers=n_tiers)
 qme = HEOMSolver(
     H, [corr],
     space='liouville', format='dense', engine='eigen',

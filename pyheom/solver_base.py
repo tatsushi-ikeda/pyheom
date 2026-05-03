@@ -384,6 +384,156 @@ class QMESolver(ABC):
         self._init_rho(rho_0)
         return Integrator(self, dt=dt, **kwargs)
 
+    @classmethod
+    def auto(cls, H, noises,
+             engines=None, spaces=None, formats=None, solvers=None,
+             dt=2.5e-3, n_warmup_steps=5, n_timing_steps=20,
+             n_trials=3, tune=False, verbose=False, return_info=False,
+             **kwargs):
+        """Return the fastest solver configuration for this system.
+
+        Tries all combinations of engine, space, format, and ODE solver,
+        runs short warmup and timing trials on the caller's actual H and noises,
+        and returns the best-performing instance.
+
+        Valid spaces are restricted to those supported by the calling class
+        (e.g. RedfieldSolver has no 'ado' space).
+
+        Parameters
+        ----------
+        H, noises : same as the constructor
+        engines : list of str, optional
+            Engines to consider; defaults to all compiled engines.
+        spaces : list of str, optional
+            Spaces to consider; defaults to all spaces valid for this class.
+        formats : list of str, optional
+            Formats to consider; defaults to ['dense', 'sparse'].
+        solvers : list of str, optional
+            ODE solvers to consider; defaults to ['lsrk4', 'rk4', 'rkdp'].
+        dt : float
+            Step size used for warmup and timing trials.
+        n_warmup_steps, n_timing_steps : int
+            Number of steps in each warmup / timing call.
+        n_trials : int
+            Timing trials per configuration; median is reported.
+        tune : bool
+            If True, sweep n_outer_threads for eigen/mkl engines (slower).
+        verbose : bool
+            Print progress lines.
+        return_info : bool
+            If True, return (solver, info_dict) instead of just solver.
+        **kwargs
+            Extra arguments forwarded to the constructor
+            (e.g. n_tiers for HEOMSolver).
+        """
+        import pyheom.pylibheom as _lb
+        from ._auto import _gpu_free_bytes, _thread_candidates, _solve_kwargs
+        import time
+
+        all_engines = ['eigen', 'mkl', 'cuda']
+        avail = [e for e in all_engines
+                 if getattr(_lb, f'{e}_is_supported', lambda: False)()]
+        engines = [e for e in (engines or avail) if e in avail]
+
+        valid_spaces = list(cls.space_char.keys())
+        spaces  = [s for s in (spaces  or valid_spaces) if s in valid_spaces]
+        formats = list(formats or ['dense', 'sparse'])
+        solvers = list(solvers or ['lsrk4', 'rk4', 'rkdp'])
+
+        gpu_free = _gpu_free_bytes()
+
+        rho_0 = np.zeros((H.shape[0],) * 2, dtype=H.dtype)
+        rho_0[0, 0] = 1.0
+        if not H.flags.c_contiguous:
+            rho_0 = np.asfortranarray(rho_0)
+
+        t_warmup = np.array([0.0, n_warmup_steps  * dt])
+        t_timing = np.array([0.0, n_timing_steps  * dt])
+
+        def _trial(qme, solver):
+            kw = _solve_kwargs(solver, dt)
+            t0 = time.perf_counter()
+            qme.solve(rho_0, t_timing, **kw)
+            return time.perf_counter() - t0
+
+        results = []
+
+        for engine in engines:
+            for space in spaces:
+                for fmt in formats:
+                    for solver in solvers:
+                        try:
+                            qme = cls(H, noises, engine=engine, space=space,
+                                      format=fmt, solver=solver, **kwargs)
+                        except AttributeError:
+                            continue
+
+                        kw_warmup = _solve_kwargs(solver, dt)
+
+                        # GPU memory guard: estimate RSS growth during warmup
+                        if engine == 'cuda' and gpu_free is not None:
+                            from ._auto import _rss_bytes
+                            before = _rss_bytes()
+                            try:
+                                qme.solve(rho_0, t_warmup, **kw_warmup)
+                            except Exception:
+                                continue
+                            delta = max(0, _rss_bytes() - before)
+                            if delta * 5 > gpu_free:
+                                if verbose:
+                                    print(f'  SKIP {engine}/{space}/{fmt}/{solver}: '
+                                          f'est. {delta*5/1024**2:.0f} MiB '
+                                          f'> {gpu_free/1024**2:.0f} MiB GPU free')
+                                continue
+                        else:
+                            try:
+                                qme.solve(rho_0, t_warmup, **kw_warmup)
+                            except Exception:
+                                continue
+
+                        # Thread tuning (eigen/mkl, only when the class supports it)
+                        best_n = 1
+                        if tune and engine in ('eigen', 'mkl') \
+                                and 'n_outer_threads' in cls.optional_args:
+                            best_t = float('inf')
+                            for n in _thread_candidates():
+                                try:
+                                    q = cls(H, noises, engine=engine, space=space,
+                                            format=fmt, solver=solver,
+                                            n_outer_threads=n, **kwargs)
+                                except (AttributeError, KeyError):
+                                    continue
+                                q.solve(rho_0, t_warmup, **kw_warmup)
+                                t = _trial(q, solver)
+                                if t < best_t:
+                                    best_n, best_t, qme = n, t, q
+                            qme.solve(rho_0, t_warmup, **kw_warmup)
+
+                        elapsed = float(np.median([_trial(qme, solver)
+                                                   for _ in range(n_trials)]))
+
+                        entry = dict(engine=engine, space=space, format=fmt,
+                                     solver=solver, n_outer_threads=best_n,
+                                     elapsed=elapsed, instance=qme)
+                        results.append(entry)
+
+                        if verbose:
+                            print(f'  {engine:6s} {space:10s} {fmt:7s} {solver:6s} '
+                                  f'threads={best_n:<3d} {elapsed:.4f}s')
+
+        results.sort(key=lambda x: x['elapsed'])
+        if not results:
+            raise RuntimeError(
+                f'{cls.__name__}.auto(): no valid engine/space/format/solver '
+                'combination found for this build.'
+            )
+
+        best = results[0]
+        if return_info:
+            info = {k: v for k, v in best.items() if k != 'instance'}
+            return best['instance'], info
+        return best['instance']
+
     @abstractmethod
     def storage_size(self):
         return 1

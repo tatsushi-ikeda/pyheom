@@ -47,6 +47,15 @@ qme = HEOMSolver(
 `n_tiers=5` gives converged results for these parameters.
 Use `engine='cuda'` to run on GPU.
 
+Alternatively, let pyheom benchmark all available engines and configurations
+and select the fastest one automatically:
+
+```python
+qme = HEOMSolver.auto(H, [corr], n_tiers=5)
+```
+
+See `HEOMSolver.auto()` in the [API reference](api.md) for tuning options.
+
 ## Time evolution
 
 ```python

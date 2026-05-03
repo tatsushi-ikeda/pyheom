@@ -80,6 +80,57 @@ integrator = qme.init(rho_0, dt)
 
 Return a low-level `Integrator` for step-by-step evolution (see below).
 
+#### `auto` (classmethod)
+
+```python
+solver        = HEOMSolver.auto(H, noises, n_tiers=5)
+solver, info  = HEOMSolver.auto(H, noises, n_tiers=5, return_info=True)
+
+solver        = RedfieldSolver.auto(H, noises)
+```
+
+Automatically select the fastest engine, representation space, matrix format,
+and ODE solver for the given system by running short timing trials.
+Returns a fully constructed solver instance ready for use.
+
+Valid spaces are restricted to those supported by the calling class:
+`HEOMSolver` searches hilbert, liouville, and ado;
+`RedfieldSolver` searches hilbert and liouville only.
+
+**Parameters**
+
+- `H`, `noises`: same as the constructor
+- `engines`: engines to consider; default: all compiled engines
+- `spaces`: spaces to consider; default: all valid spaces for this class
+- `formats`: formats to consider; default: `['dense', 'sparse']`
+- `solvers`: ODE solvers to consider; default: `['lsrk4', 'rk4', 'rkdp']`
+- `dt`: step size for timing trials (default: `2.5e-3`)
+- `n_warmup_steps`: steps in each warmup call (default: `5`)
+- `n_timing_steps`: steps in each timing call (default: `20`)
+- `n_trials`: timing trials per configuration; median is used (default: `3`)
+- `tune`: if `True`, sweep `n_outer_threads` for eigen/mkl (default: `False`)
+- `verbose`: print one line per configuration tried (default: `False`)
+- `return_info`: if `True`, return `(solver, info_dict)` instead of just the solver
+- `**kwargs`: forwarded to the constructor (e.g. `n_tiers` for `HEOMSolver`)
+
+**Returns**
+
+The best solver instance, or `(instance, info)` when `return_info=True`.
+`info` is a dict with keys `engine`, `space`, `format`, `solver`,
+`n_outer_threads`, and `elapsed` (median timing trial time in seconds).
+
+**Example**
+
+```python
+# Let pyheom choose the fastest configuration for this machine and system
+qme = HEOMSolver.auto(H, [corr], n_tiers=5)
+result = qme.solve(rho_0, t_list, dt=0.0025)
+
+# Inspect what was chosen
+qme, info = HEOMSolver.auto(H, [corr], n_tiers=5, return_info=True, verbose=True)
+print(info)  # {'engine': 'mkl', 'space': 'ado', 'format': 'sparse', ...}
+```
+
 ---
 
 ## Return types
