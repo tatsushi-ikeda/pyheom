@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 import pyheom.pylibheom as _lb
-from pyheom import heom_solver, noise_decomposition, Brown, unit
+from pyheom import HEOMSolver, noise_decomposition, Brown, unit
 
 pytestmark = pytest.mark.integration
 
@@ -27,7 +27,7 @@ def _run(engine):
     H = np.array([[omega_1, 0.0], [0.0, 0.0]], dtype=np.complex128)
     corr.V = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
 
-    qme = heom_solver(
+    qme = HEOMSolver(
         H, [corr],
         space='liouville', format='dense', engine=engine,
         liouville_order='C', solver='lsrk4',

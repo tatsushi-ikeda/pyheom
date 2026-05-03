@@ -2,10 +2,10 @@
 
 ## Solvers
 
-### `heom_solver`
+### `HEOMSolver`
 
 ```python
-heom_solver(H, noises, *, space='hilbert', format='dense', engine='eigen',
+HEOMSolver(H, noises, *, space='hilbert', format='dense', engine='eigen',
             liouville_order='C', solver='lsrk4', n_tiers,
             n_inner_threads=1, n_outer_threads=None,
             units=None, device=None)
@@ -34,25 +34,25 @@ Hierarchical equations of motion (HEOM) solver.
 - `rho_hierarchy`: full ADO array, shape `(storage_size, n, n)` (zero-copy view)
 - `storage_size`: total number of ADOs (hierarchy nodes + 1)
 
-**Methods:** see `qme_solver` below.
+**Methods:** see `QMESolver` below.
 
 ---
 
-### `redfield_solver`
+### `RedfieldSolver`
 
 ```python
-redfield_solver(H, noises, *, space='hilbert', format='dense', engine='eigen',
+RedfieldSolver(H, noises, *, space='hilbert', format='dense', engine='eigen',
                 liouville_order='C', solver='lsrk4',
                 n_inner_threads=1, n_outer_threads=None,
                 units=None, device=None)
 ```
 
 Redfield master equation solver (Born-Markov approximation, no ADO hierarchy).
-Parameters are the same as `heom_solver` except `n_tiers` is absent.
+Parameters are the same as `HEOMSolver` except `n_tiers` is absent.
 
 ---
 
-### `qme_solver` (abstract base)
+### `QMESolver` (abstract base)
 
 Both solvers share the following interface.
 
@@ -203,7 +203,7 @@ unit.dimensionless # natural units (default)
 Pass as the `units=` argument to the solver constructor:
 
 ```python
-qme = heom_solver(H, [corr], ..., units={'energy': unit.wavenumber,
+qme = HEOMSolver(H, [corr], ..., units={'energy': unit.wavenumber,
                                          'time':   unit.femtosecond})
 ```
 

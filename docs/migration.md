@@ -13,9 +13,9 @@ solver = pyheom.HEOM(H, noises, max_tier=5, ...)
 solver = pyheom.Redfield(H, noises, ...)
 
 # v1.0
-from pyheom import heom_solver, redfield_solver
-solver = heom_solver(H, noises, n_tiers=5, ...)
-solver = redfield_solver(H, noises, ...)
+from pyheom import HEOMSolver, RedfieldSolver
+solver = HEOMSolver(H, noises, n_tiers=5, ...)
+solver = RedfieldSolver(H, noises, ...)
 ```
 
 ### Noise format
@@ -28,7 +28,7 @@ noise = {"V": V, "C": {"gamma": ..., "s": ..., "a": ..., "S_delta": ...}}
 from pyheom import noise_decomposition, Brown
 corr = noise_decomposition(Brown(...), T=T, type_ltc='psd', n_psd=1, type_psd='n-1/n')
 corr.V = V
-solver = heom_solver(H, [corr], ...)
+solver = HEOMSolver(H, [corr], ...)
 ```
 
 Key renames from intermediate dict format:
@@ -67,10 +67,10 @@ rho_h = solver.rho_hierarchy       # zero-copy view of full ADO array
 ```python
 # v0.5: not exposed
 # intermediate master (deprecated)
-solver = heom_solver(..., order_liouville='row_major')
+solver = HEOMSolver(..., order_liouville='row_major')
 
 # v1.0
-solver = heom_solver(..., liouville_order='C')   # or 'F'
+solver = HEOMSolver(..., liouville_order='C')   # or 'F'
 ```
 
 ### Backend and format selection
@@ -81,7 +81,7 @@ solver = pyheom.HEOM(..., gpu_device=0, matrix_type='dense',
                      hierarchy_connection='loop')
 
 # v1.0
-solver = heom_solver(..., engine='cuda', device=0, format='dense', space='hilbert')
+solver = HEOMSolver(..., engine='cuda', device=0, format='dense', space='hilbert')
 ```
 
 ### Known bug in v0.5
@@ -109,8 +109,8 @@ pyheom.units['energy'] = pyheom.unit.wavenumber
 pyheom.units['time']   = pyheom.unit.femtosecond
 
 # v1.0.0a4
-solver = heom_solver(H, [corr], ..., units={'energy': unit.wavenumber,
-                                            'time':   unit.femtosecond})
+solver = HEOMSolver(H, [corr], ..., units={'energy': unit.wavenumber,
+                                           'time':   unit.femtosecond})
 ```
 
 ### noise_decomposition return type
@@ -118,12 +118,12 @@ solver = heom_solver(H, [corr], ..., units={'energy': unit.wavenumber,
 ```python
 # v1.0.0a2  (returned a plain dict)
 corr = noise_decomposition(J, T=T, type_ltc='none')
-solver = heom_solver(H, [dict(V=V, **corr)], ...)
+solver = HEOMSolver(H, [dict(V=V, **corr)], ...)
 
 # v1.0.0a4  (returns BathCorrelation dataclass)
 corr   = noise_decomposition(J, T=T, type_ltc='none')
 corr.V = V
-solver = heom_solver(H, [corr], ...)
+solver = HEOMSolver(H, [corr], ...)
 ```
 
 Dict-style access (`corr['gamma']`) is no longer supported; use `corr.gamma`.
@@ -136,6 +136,20 @@ from pyheom import drude, brown, overdamped_brown, brown_drude
 
 # v1.0.0a4
 from pyheom import Drude, Brown, OverdampedBrown, BrownDrude
+```
+
+### Solver class names
+
+```python
+# v1.0.0a2
+from pyheom import heom_solver, redfield_solver
+solver = heom_solver(H, [corr], ...)
+solver = redfield_solver(H, [corr], ...)
+
+# v1.0.0a4
+from pyheom import HEOMSolver, RedfieldSolver
+solver = HEOMSolver(H, [corr], ...)
+solver = RedfieldSolver(H, [corr], ...)
 ```
 
 ### New in v1.0.0a4

@@ -7,7 +7,7 @@ All quantities are dimensionless.
 
 ```python
 import numpy as np
-from pyheom import heom_solver, noise_decomposition, Brown
+from pyheom import HEOMSolver, noise_decomposition, Brown
 
 # Physical parameters
 lambda_0 = 0.01   # coupling constant
@@ -36,7 +36,7 @@ correction.
 ## Creating the solver
 
 ```python
-qme = heom_solver(
+qme = HEOMSolver(
     H, [corr],
     space='liouville', format='dense', engine='eigen',
     liouville_order='C', solver='lsrk4',

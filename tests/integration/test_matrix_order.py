@@ -8,7 +8,7 @@ performance settings with no effect on computed values.
 import numpy as np
 import pytest
 
-from pyheom import heom_solver, noise_decomposition, Brown
+from pyheom import HEOMSolver, noise_decomposition, Brown
 
 pytestmark = pytest.mark.integration
 
@@ -26,7 +26,7 @@ def _run_one(h_order, liouville_order, n_tiers=3):
     V = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128, order=h_order)
     corr.V = V
 
-    qme = heom_solver(
+    qme = HEOMSolver(
         H, [corr],
         space='liouville', format='dense', engine='eigen',
         liouville_order=liouville_order, solver='lsrk4',

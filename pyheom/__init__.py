@@ -13,7 +13,7 @@ from .heom_solver         import *
 
 # Re-export public types at top level
 from .noise_decomposition import BathCorrelation
-from .qme_solver import Result, Integrator
+from .solver_base import Result, Integrator
 
 def is_supported(engine):
     engine = engine.lower()

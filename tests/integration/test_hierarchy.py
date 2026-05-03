@@ -11,18 +11,18 @@ import numpy as np
 import pytest
 from math import comb
 
-from pyheom import heom_solver, noise_decomposition, Drude, Brown
+from pyheom import HEOMSolver, noise_decomposition, Drude, Brown
 
 pytestmark = pytest.mark.integration
 
 
 def _make_solver(corr, n_tiers):
-    """Build a minimal heom_solver for hierarchy-structure queries."""
+    """Build a minimal HEOMSolver for hierarchy-structure queries."""
     H = np.array([[1.0, 0.0], [0.0, 0.0]], dtype=np.complex128)
     V = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
     corr.V = V
 
-    return heom_solver(
+    return HEOMSolver(
         H, [corr],
         space='liouville', format='dense', engine='eigen',
         liouville_order='C', solver='lsrk4',

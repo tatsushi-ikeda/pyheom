@@ -9,7 +9,7 @@ Also verifies: dimension consistency for n_level=2 and 3; trace preservation.
 import numpy as np
 import pytest
 
-from pyheom import redfield_solver, noise_decomposition, Drude, unit
+from pyheom import RedfieldSolver, noise_decomposition, Drude, unit
 
 pytestmark = pytest.mark.integration
 
@@ -27,7 +27,7 @@ def _build_solver(H, V, eta):
     J = Drude(eta=eta, gamma_c=1.0)
     corr = noise_decomposition(J, T=1.0, type_ltc='none')
     corr.V = V
-    return redfield_solver(
+    return RedfieldSolver(
         H, [corr],
         space='liouville', format='dense', engine='eigen',
         liouville_order='C', solver='lsrk4',
@@ -85,7 +85,7 @@ class TestDimensions:
         J = Drude(eta=1e-8, gamma_c=1.0)
         corr = noise_decomposition(J, T=1.0, type_ltc='none')
         corr.V = V
-        qme = redfield_solver(H, [corr], space='liouville',
+        qme = RedfieldSolver(H, [corr], space='liouville',
                               format='dense', engine='eigen',
                               liouville_order='C', solver='lsrk4')
         rho_0 = np.eye(n_level, dtype=np.complex128) / n_level
@@ -105,7 +105,7 @@ class TestTracePreservation:
         J = Drude(eta=0.1, gamma_c=1.0)
         corr = noise_decomposition(J, T=1.0, type_ltc='none')
         corr.V = V
-        qme = redfield_solver(H, [corr], space='liouville',
+        qme = RedfieldSolver(H, [corr], space='liouville',
                               format='dense', engine='eigen',
                               liouville_order='C', solver='lsrk4')
 

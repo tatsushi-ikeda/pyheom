@@ -12,7 +12,7 @@ Covers:
 import numpy as np
 import pytest
 
-from pyheom import heom_solver, redfield_solver, noise_decomposition, Brown, Drude, Result, Integrator
+from pyheom import HEOMSolver, RedfieldSolver, noise_decomposition, Brown, Drude, Result, Integrator
 
 pytestmark = pytest.mark.integration
 
@@ -26,7 +26,7 @@ def _build_heom(n_tiers=3):
     omega_1 = np.sqrt(1.0 - 0.5**2 * 0.25)
     H = np.array([[omega_1, 0.0], [0.0, 0.0]], dtype=np.complex128)
     corr.V = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
-    return heom_solver(
+    return HEOMSolver(
         H, [corr],
         space='liouville', format='dense', engine='eigen',
         liouville_order='C', solver='lsrk4',
@@ -255,7 +255,7 @@ class TestLazyNOuterThreads:
         corr = noise_decomposition(J, T=1.0, type_ltc='none')
         corr.V = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
         H = np.array([[1.0, 0.0], [0.0, 0.0]], dtype=np.complex128)
-        qme = heom_solver(
+        qme = HEOMSolver(
             H, [corr],
             space='liouville', format='dense', engine='eigen',
             liouville_order='C', solver='lsrk4',
@@ -276,7 +276,7 @@ class TestDeviceKwarg:
         corr.V = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
         H = np.array([[1.0, 0.0], [0.0, 0.0]], dtype=np.complex128)
         with pytest.raises(ValueError, match="'device'"):
-            heom_solver(
+            HEOMSolver(
                 H, [corr],
                 space='liouville', format='dense', engine='eigen',
                 liouville_order='C', solver='lsrk4',

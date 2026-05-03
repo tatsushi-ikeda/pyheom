@@ -5,11 +5,11 @@
 #  See LICENSE.txt for licence.
 # ------------------------------------------------------------------------*/
 
-from .qme_solver import *
+from .solver_base import *
 from os import environ
 from multiprocessing import cpu_count
 
-class heom_solver(qme_solver):
+class HEOMSolver(QMESolver):
     """Hierarchical equations of motion (HEOM) solver.
 
     n_tiers controls the hierarchy truncation depth.
@@ -19,13 +19,12 @@ class heom_solver(qme_solver):
     compulsory_args = [
         'n_tiers',
     ]
-    
+
     optional_args = OrderedDict(
         n_inner_threads = 1,
-        # U1: evaluated at construction time (not at module import) via callable default
         n_outer_threads = lambda: int(environ.get('OMP_NUM_THREADS', cpu_count())),
     )
-    
+
     space_char = {
         'hilbert':   'h',
         'liouville': 'l',
@@ -34,4 +33,3 @@ class heom_solver(qme_solver):
 
     def storage_size(self):
         return self.qme_impl.get_n_hrchy() + 1
-

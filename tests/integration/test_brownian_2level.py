@@ -8,7 +8,7 @@ build (no MKL, no CUDA).  The reference matches the SI v0.5 result to ~1e-11.
 import numpy as np
 import pytest
 
-from pyheom import heom_solver, noise_decomposition, Brown, unit
+from pyheom import HEOMSolver, noise_decomposition, Brown, unit
 
 
 # (time, rho_00) reference points from population_master_eigen.dat
@@ -39,7 +39,7 @@ def _build_solver():
     H = np.array([[omega_1, 0.0], [0.0, 0.0]], dtype=np.complex128)
     corr.V = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
 
-    return heom_solver(
+    return HEOMSolver(
         H, [corr],
         space='liouville', format='dense', engine='eigen',
         liouville_order='C', solver='lsrk4',

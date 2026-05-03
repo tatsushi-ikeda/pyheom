@@ -19,7 +19,7 @@ from .noise_decomposition import BathCorrelation
 
 @dataclass
 class Result:
-    """Return value of :meth:`qme_solver.solve`.
+    """Return value of `QMESolver.solve`.
 
     Attributes
     ----------
@@ -38,7 +38,7 @@ class Result:
 
 
 class Integrator:
-    """Low-level integrator interface returned by :meth:`qme_solver.init`.
+    """Low-level integrator interface returned by `QMESolver.init`.
 
     Provides step-by-step time evolution with full access to the ADO hierarchy
     after each `advance_to` call.  Intended for nonlinear spectroscopy
@@ -93,7 +93,7 @@ class Integrator:
         return self._qme._rho
 
 
-class qme_solver(ABC):
+class QMESolver(ABC):
     """Abstract base for HEOM and Redfield solvers.
 
     engine: 'eigen' (CPU, default), 'mkl' (Intel MKL), or 'cuda' (GPU).
@@ -190,7 +190,7 @@ class qme_solver(ABC):
                                        unrolling,
                                        liouville_order)
 
-        self.engine_impl = qme_solver.get_class('{engine}', self.config)(
+        self.engine_impl = QMESolver.get_class('{engine}', self.config)(
             *(dict(ENGINE_ARGS[engine], **engine_args).values())
         )
 
@@ -213,7 +213,7 @@ class qme_solver(ABC):
             if callable(self.qme_args[k]):
                 self.qme_args[k] = self.qme_args[k]()
 
-        self.qme_impl = qme_solver.get_class(
+        self.qme_impl = QMESolver.get_class(
             '{qme_name}_{c_dtype}{c_space}{c_format}{c_order}{c_order_liouville}{c_level}_{engine}',
             self.config)(
             *(self.qme_args.values())
@@ -256,9 +256,9 @@ class qme_solver(ABC):
                                     libheom_coo_matrix(a_mat))
         self.qme_impl.set_param(self.engine_impl)
 
-        self.solver_impl     = qme_solver.get_class('{solver}_{c_dtype}{c_order}_{engine}', self.config)()
+        self.solver_impl     = QMESolver.get_class('{solver}_{c_dtype}{c_order}_{engine}', self.config)()
 
-        self.qme_solver_impl = qme_solver.get_class('qme_solver_{c_dtype}{c_order}_{engine}', self.config)(
+        self.qme_solver_impl = QMESolver.get_class('qme_solver_{c_dtype}{c_order}_{engine}', self.config)(
             self.engine_impl,
             self.qme_impl,
             self.solver_impl

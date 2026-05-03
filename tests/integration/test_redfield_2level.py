@@ -1,6 +1,6 @@
 """Integration test: 2-level Brownian-oscillator Redfield dynamics.
 
-Same physical system as test_brownian_2level.py but using redfield_solver
+Same physical system as test_brownian_2level.py but using RedfieldSolver
 (Markov/secular approximation).  Reference values differ from HEOM because
 Redfield uses a weaker approximation: no hierarchy, secular/Markov.
 """
@@ -8,7 +8,7 @@ Redfield uses a weaker approximation: no hierarchy, secular/Markov.
 import numpy as np
 import pytest
 
-from pyheom import redfield_solver, noise_decomposition, Brown, unit
+from pyheom import RedfieldSolver, noise_decomposition, Brown, unit
 
 
 # Pinned reference: rho_00(t) from Eigen build, lsrk4, dt=2.5e-3
@@ -38,7 +38,7 @@ def _build_solver():
     H = np.array([[omega_1, 0.0], [0.0, 0.0]], dtype=np.complex128)
     corr.V = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
 
-    return redfield_solver(
+    return RedfieldSolver(
         H, [corr],
         space='liouville', format='dense', engine='eigen',
         liouville_order='C', solver='lsrk4',

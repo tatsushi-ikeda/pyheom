@@ -1,7 +1,7 @@
 """Integration test: Redfield LU decomposition with many Pade poles.
 
 Uses n_psd=5 (K=7 modes, 7x7 gamma matrix per noise source) to exercise
-the LU decomposition used in redfield_solver.correlation().  Serves as a
+the LU decomposition used in RedfieldSolver.correlation().  Serves as a
 regression test for the pivot-selection fix in linalg_engine_nil.
 
 Reference values generated with the corrected Eigen build.
@@ -10,7 +10,7 @@ Reference values generated with the corrected Eigen build.
 import numpy as np
 import pytest
 
-from pyheom import redfield_solver, noise_decomposition, Brown
+from pyheom import RedfieldSolver, noise_decomposition, Brown
 
 
 REFERENCE = [
@@ -38,7 +38,7 @@ def _build_solver():
     H = np.array([[omega_1, 0.0], [0.0, 0.0]], dtype=np.complex128)
     corr.V = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
 
-    return redfield_solver(
+    return RedfieldSolver(
         H, [corr],
         space='liouville', format='dense', engine='eigen',
         liouville_order='C', solver='lsrk4',

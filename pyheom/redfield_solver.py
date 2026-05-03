@@ -5,9 +5,9 @@
 #  See LICENSE.txt for licence.
 # ------------------------------------------------------------------------*/
 
-from .qme_solver import *
+from .solver_base import *
 
-class redfield_solver(qme_solver):
+class RedfieldSolver(QMESolver):
     """Redfield master equation solver (Born-Markov approximation, no ADO hierarchy)."""
     qme_name = 'redfield'
 

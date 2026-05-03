@@ -15,7 +15,7 @@ from sys import stderr
 import numpy as np
 import tqdm
 
-from pyheom import heom_solver, noise_decomposition, Brown
+from pyheom import HEOMSolver, noise_decomposition, Brown
 
 # --- system parameters (all dimensionless) ---
 lambda_0 = 0.01   # coupling constant
@@ -35,7 +35,7 @@ corr = noise_decomposition(J, T=T, type_ltc='psd', n_psd=1, type_psd='n-1/n')
 corr.V = V
 
 # --- solver setup ---
-qme = heom_solver(
+qme = HEOMSolver(
     H, [corr],
     space='liouville', format='dense', engine='eigen',
     liouville_order='C', solver='lsrk4',
