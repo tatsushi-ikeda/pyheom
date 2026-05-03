@@ -2,23 +2,20 @@
 #  PyHEOM
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
-#  See LINCENSE.txt for licence.
+#  See LICENSE.txt for licence.
 # ------------------------------------------------------------------------*/
-
-import pyheom.pylibheom as libheom
 
 import numpy as np
 import pyheom.pylibheom as libheom
 from collections import OrderedDict
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 from .unit       import *
 from .const      import *
 from .coo_matrix import *
 
-class qme_solver:
-    __metaclass__ = ABCMeta
-    
+class qme_solver(ABC):
+
     space_char = {
         'hilbert':   'h',
         'liouville': 'l',
@@ -71,7 +68,7 @@ class qme_solver:
                  engine='eigen',
                  unrolling=True,
                  solver='lsrk4',
-                 order_liouville='row_major',
+                 liouville_order='C',
                  engine_args={},
                  **args):
         engine = engine.lower()
@@ -90,7 +87,7 @@ class qme_solver:
                                        self.c_contiguous,
                                        self.n_level,
                                        unrolling,
-                                       order_liouville)
+                                       liouville_order)
 
         self.engine_impl = qme_solver.get_class('{engine}', self.config)(
             *(dict(ENGINE_ARGS[engine], **engine_args).values())
@@ -150,17 +147,31 @@ class qme_solver:
             self.qme_impl,
             self.solver_impl
         )
-    
-    def solve(self, rho, t_list, callback=lambda t: None, **kwargs):
-        if rho.flags.c_contiguous != self.c_contiguous:
+
+        order = 'C' if self.c_contiguous else 'F'
+        self._rho = np.zeros((self.storage_size(), self.n_level, self.n_level),
+                             dtype=self.dtype, order=order)
+
+    @property
+    def rho(self):
+        return self._rho[0]
+
+    @property
+    def rho_hierarchy(self):
+        return self._rho
+
+    def solve(self, rho_0, t_list, callback=lambda t: None, **kwargs):
+        if rho_0.flags.c_contiguous != self.c_contiguous:
             order_H   = ORDER_CHAR_NUMPY[self.c_contiguous]
-            order_rho = ORDER_CHAR_NUMPY[rho.flags.c_contiguous]
-            raise ValueError(f'The orders of H and rho are inconsistent: {order_H} and {order_rho}')
-        if rho.dtype != self.dtype:
-            raise TypeError(f'The types of H and rho are inconsistent: {self.dtype} and {rho.dtype}')
+            order_rho = ORDER_CHAR_NUMPY[rho_0.flags.c_contiguous]
+            raise ValueError(f'The orders of H and rho_0 are inconsistent: {order_H} and {order_rho}')
+        if rho_0.dtype != self.dtype:
+            raise TypeError(f'The types of H and rho_0 are inconsistent: {self.dtype} and {rho_0.dtype}')
+        self._rho[:] = 0
+        self._rho[0] = rho_0
         if 'dt' in kwargs:
             kwargs = dict(kwargs, dt=kwargs['dt']*calc_unit())
-        self.qme_solver_impl.solve(rho, np.array(t_list)*calc_unit(), callback, **kwargs)
+        self.qme_solver_impl.solve(self._rho, np.array(t_list)*calc_unit(), callback, **kwargs)
 
     @abstractmethod
     def storage_size(self):

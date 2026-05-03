@@ -2,7 +2,7 @@
 #  PyHEOM
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
-#  See LINCENSE.txt for licence.
+#  See LICENSE.txt for licence.
 # ------------------------------------------------------------------------*/
 
 cmake_minimum_required(VERSION 3.12)
@@ -29,7 +29,7 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${LIBHEOM_CUDA_FLAGS}")
 set(CMAKE_SHARED_LINKER_FLAGS       "${CMAKE_SHARED_LINKER_FLAGS} ${LIBHEOM_SHARED_LINKER_FLAGS}")
 set(CMAKE_SHARED_LIBRARY_CUDA_FLAGS "${CMAKE_SHARED_LIBRARY_CUDA_FLAGS} ${LIBHEOM_SHARED_LINKER_FLAGS}")
 
-find_package(PythonInterp 3.6 REQUIRED)
+find_package(PythonInterp 3.9 REQUIRED)
 
 if(EXISTS "${CMAKE_SOURCE_DIR}/3rdparty/pybind11")
   add_subdirectory(3rdparty/pybind11)

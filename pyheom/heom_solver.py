@@ -2,7 +2,7 @@
 #  PyHEOM
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
-#  See LINCENSE.txt for licence.
+#  See LICENSE.txt for licence.
 # ------------------------------------------------------------------------*/
 
 from .qme_solver import *
@@ -13,7 +13,7 @@ class heom_solver(qme_solver):
     qme_name = 'heom'
 
     compulsory_args = [
-        'depth',
+        'n_tiers',
     ]
     
     optional_args = OrderedDict(

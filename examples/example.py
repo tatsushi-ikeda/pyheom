@@ -2,7 +2,7 @@
 #  PyHEOM
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
-#  See LINCENSE.txt for licence.
+#  See LICENSE.txt for licence.
 # ------------------------------------------------------------------------*/
 
 import numpy as np
@@ -18,18 +18,18 @@ pyheom.units['energy'] = unit.dimensionless
 pyheom.units['time']   = unit.dimensionless
 import tqdm
 
-dtype           = np.complex128
-space           = 'liouville'
-format          = 'dense'
-engine          = 'eigen'
-solver          = 'lsrk4'
-order_liouville = 'row_major'
+dtype            = np.complex128
+space            = 'liouville'
+format           = 'dense'
+engine           = 'eigen'
+solver           = 'lsrk4'
+liouville_order  = 'C'
 
 lambda_0  = 0.01 # coupling constant     (dimensionless)
 omega_0   = 1    # vibrational frequency (dimensionless)
 zeta      = 0.5  # damping constant      (dimensionless)
 T         = 1    # temperature           (dimensionless)
-depth     = 5
+n_tiers   = 5
 
 callback_interval = 2.5e-2
 count             = 25
@@ -63,19 +63,15 @@ V = np.array([[0, 1],
 
 qme = heom_solver(H, [dict(V=V, **corr_dict)],
                   space=space, format=format, engine=engine,
-                  order_liouville=order_liouville,
+                  liouville_order=liouville_order,
                   solver=solver,
                   engine_args=dict(),
-                  depth = depth,
-                  n_inner_threads = 4,
-                  n_outer_threads = 1)
+                  n_tiers=n_tiers,
+                  n_inner_threads=4,
+                  n_outer_threads=1)
 
-n_storage = qme.storage_size()
-
-
-rho = np.zeros((n_storage,n_level,n_level), dtype=dtype)
-rho_0 = rho[0,:,:]
-rho_0[0,0] = 1
+rho_0 = np.zeros((n_level, n_level), dtype=dtype)
+rho_0[0, 0] = 1
 
 with open('pop.dat', 'w') as out, \
      tqdm.tqdm(total=count) as bar:
@@ -83,10 +79,10 @@ with open('pop.dat', 'w') as out, \
     print('# time diabatic populations', file=out)
     def callback(t):
         bar.update(callback_interval)
-        print(t, rho_0[0,0].real, rho_0[1,1].real, file=out)
+        print(t, qme.rho[0,0].real, qme.rho[1,1].real, file=out)
         out.flush()
     begin = time.time()
-    qme.solve(rho, t_list, callback=callback, **solver_params)
+    qme.solve(rho_0, t_list, callback=callback, **solver_params)
     end   = time.time()
 print('elapsed:', end - begin, file=stderr)
 del qme

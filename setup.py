@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # PyHEOM: Copyright (c) Tatsushi Ikeda
 # This library is distributed under BSD 3-Clause License.
-# See LINCENSE.txt for licence.
+# See LICENSE.txt for licence.
 # ------------------------------------------------------------------------
 
 import os
@@ -137,19 +137,7 @@ setup(
     ext_modules=[CMakeExtension("pyheom.pylibheom")],
     cmdclass={"build_ext": CMakeBuild},
     install_requires=['numpy', 'scipy', 'jinja2'],
+    python_requires='>=3.9',
     zip_safe=False
 )
-
-# from setuptools import setup
-# import sys
-# import os
-
-# setup(name='pyheom',
-#       version='0.6.20',
-#       author='Tatsushi IKEDA',
-#       author_email='ikeda.tatsushi.37u@kyoto-u.jp',
-#       install_requires=['pylibheom>=0.6.18', 'numpy', 'scipy', 'jinja2'],
-#       packages=['pyheom'],
-#       package_dir={'pyheom':'pyheom'},
-#       zip_safe=False)
 

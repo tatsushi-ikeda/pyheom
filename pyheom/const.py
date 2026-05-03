@@ -2,7 +2,7 @@
 #  PyHEOM
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
-#  See LINCENSE.txt for licence.
+#  See LICENSE.txt for licence.
 # ------------------------------------------------------------------------*/
 
 import numpy as np
@@ -26,15 +26,15 @@ FORMAT_CHAR = {
 }
 
 ORDER_CHAR  = {
-    'row_major': 'r',
-    'col_major': 'c',
+    'C':   'r',
+    'F':   'c',
     True:  'r',
     False: 'c',
 }
 
 ORDER_CHAR_NUMPY  = {
-    'row_major': 'C',
-    'col_major': 'F',
+    'C':   'C',
+    'F':   'F',
     True:  'C',
     False: 'F',
 }

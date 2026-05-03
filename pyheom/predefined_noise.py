@@ -2,7 +2,7 @@
 #  PyHEOM
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
-#  See LINCENSE.txt for licence.
+#  See LICENSE.txt for licence.
 # ------------------------------------------------------------------------*/
 
 import numpy as np
@@ -100,8 +100,6 @@ class brown_drude:
 
         omega2_k = np.roots([c3, c2, c1, c0])
         gamma_k = np.array([cm.sqrt(omega2)/1.0j if cm.sqrt(omega2).imag >= 0.0 else -cm.sqrt(omega2)/1.0j for omega2 in omega2_k])
-        # if np.abs(omega_1) < (np.finfo(float).eps):
-        #     raise Exception('Calculation for critical damping case is unsupported feature.')
 
         Gamma = (gamma_k[0]**2-gamma_k[1]**2)*(gamma_k[1]**2-gamma_k[2]**2)*(gamma_k[2]**2-gamma_k[0]**2)
 
