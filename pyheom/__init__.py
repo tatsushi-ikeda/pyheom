@@ -8,8 +8,8 @@
 from .predefined_noise    import *
 from .noise_decomposition import *
 from .unit                import *
-from .redfield_solver     import *
-from .heom_solver         import *
+from .redfield     import *
+from .heom         import *
 
 # Re-export public types at top level
 from .noise_decomposition import BathCorrelation
