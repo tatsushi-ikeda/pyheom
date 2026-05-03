@@ -23,3 +23,4 @@ test/*
 *.egg-info/*
 gmon.out
 __pycache__/
+docs/_build/
