@@ -5,13 +5,10 @@ Hierarchical Equations of Motion (HEOM) and the Redfield master equation.
 
 Based on: Ikeda & Scholes, *J. Chem. Phys.* **152**, 204101 (2020).
 
-```{toctree}
-:maxdepth: 2
-:caption: Contents
+## Contents
 
-installation
-quickstart
-api
-migration
-disclaimer
-```
+- [Installation](installation.md)
+- [Quick Start](quickstart.md)
+- [API Reference](api.md)
+- [Migration Guide](migration.md)
+- [Disclaimer](disclaimer.md)
