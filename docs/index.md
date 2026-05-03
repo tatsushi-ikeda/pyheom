@@ -13,4 +13,5 @@ installation
 quickstart
 api
 migration
+disclaimer
 ```

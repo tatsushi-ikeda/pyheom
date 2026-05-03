@@ -2,57 +2,36 @@
     <img src="https://raw.githubusercontent.com/tatsushi-ikeda/libheom/master/etc/libheom_logo_simple.svg" alt="LibHEOM" height=96>
 </p>
 
-# PyHEOM: Python 3 Library to Simulate Open Quantum Dynamics based on HEOM Theory
+# PyHEOM: Python Library for Open Quantum Dynamics based on HEOM Theory
 
-The current stable version is [v0.5](https://github.com/tatsushi-ikeda/pyheom/tree/v0.5). 
+`pyheom` is an open-source Python library for open quantum dynamics simulations.
+It provides HEOM (Hierarchical Equations of Motion) and Redfield master equation solvers
+backed by a C++ core (`libheom`) with CPU (Eigen/MKL) and GPU (CUDA) backends.
 
-Version [1.0 (alpha)](https://github.com/tatsushi-ikeda/pyheom/tree/master) is under development and could be unstable.
-In some environments, v0.5 may work more efficiently.
+The current release is v1.0.0a4.
 
-## Introduction
+## Documentation
 
-`pyheom` is an open-source library that supports open quantum dynamics simulations based on the hierarchical equations of motion (HEOM) theory.
-This library provides a python 3 binding of `libheom` (`pylibheom`) and high-level APIs.
-All future development will be handled in this repository.
+Full documentation (installation, quick start, API reference) is available in [`docs/`](docs/index.md).
 
-This library is still under development, and some optional functions are not implemented.
-There are no guarantees about backward compatibility as of now (Version 0.6).
+## Requirements
 
-## TODO
+- Python 3.9+
+- NumPy, SciPy
+- CMake 3.20+, C++17 compiler (Intel icpx 2024+ or GCC 8+)
 
--   Write API documentation
--   Rewrite codes for non-linear spectra calculations which are temporarily removed
+Optional backends:
 
-## Required Packages
-
--   Python 3.6 or later
--   libheom and its dependent libraries:
-    [https://github.com/tatsushi-ikeda/libheom](https://github.com/tatsushi-ikeda/libheom)
--   pybind11:
-    [https://github.com/pybind/pybind11](https://github.com/pybind/pybind11)
--   numpy:
-    [https://numpy.org/](https://numpy.org/)
--   scipy:
-    [https://www.scipy.org/](https://www.scipy.org/)
--   jinja2:
-    [https://jinja.palletsprojects.com](https://jinja.palletsprojects.com/en/3.1.x/)
+- Intel MKL (`mkl` engine)
+- CUDA 11.7+ / nvcc (`cuda` engine)
 
 ## Installation
 
-Type the following command from the source tree directory:
-
 ```bash
-pip install .
+pip install -e .
 ```
 
-or
-
-```
-pip install git+https://github.com/tatsushi-ikeda/pyheom
-```
-
-You can specify arguments for cmake by using the environment variable `CMAKE_ARGS`.
-For details, see [INSTALL.md](INSTALL.md).
+For MKL and CUDA backends see [`docs/installation.md`](docs/installation.md).
 
 This [Google Colaboratory example](https://colab.research.google.com/github/tatsushi-ikeda/pyheom/blob/develop/examples/pyheom_example_2level_cpu.ipynb) ([GPGPU version](https://colab.research.google.com/github/tatsushi-ikeda/pyheom/blob/develop/examples/pyheom_example_2level_gpu.ipynb)) may be helpful.
 
@@ -67,6 +46,7 @@ This [Google Colaboratory example](https://colab.research.google.com/github/tats
 [![license](https://img.shields.io/badge/license-New%20BSD-blue.svg)](http://en.wikipedia.org/wiki/BSD_licenses#3-clause_license_.28.22Revised_BSD_License.22.2C_.22New_BSD_License.22.2C_or_.22Modified_BSD_License.22.29)
 
 `libheom` and `pyheom` are distributed under the BSD 3-clause License. See the `LICENSE.txt` file for details.
+See also [Disclaimer](docs/disclaimer.md) for notes on documentation.
 
 ## Citation Information
 
@@ -93,6 +73,6 @@ This [Google Colaboratory example](https://colab.research.google.com/github/tats
     <a href="https://www.moore.org/"><img src="https://www.moore.org/docs/default-source/Grantee-Resources/foundation-logos/moore-logo-color.jpg?sfvrsn=2" alt="MOORE" height=48 hspace=8></a>
 </p>
 
--   A prototype of this library was developed for projects supported by [Japan Society for the Promotion of Science](https://www.jsps.go.jp/). 
+-   A prototype of this library was developed for projects supported by [Japan Society for the Promotion of Science](https://www.jsps.go.jp/).
     The current version is being developed for projects funded by JSPS again.
 -   The version for the above research paper (v0.5) was developed in [the Scholes group](http://chemlabs.princeton.edu/scholes/) for projects supported by [the Gordon and Betty Moore Foundation](https://www.moore.org/).
