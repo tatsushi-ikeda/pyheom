@@ -6,7 +6,7 @@
 
 ```python
 HEOMSolver(H, noises, *, space='hilbert', format='dense', engine='eigen',
-            liouville_order='C', solver='lsrk4', n_tiers,
+            liouville_order='C', solver='lsrk4', unrolling=True, n_tiers,
             n_inner_threads=1, n_outer_threads=None,
             units=None, device=None)
 ```
@@ -22,6 +22,8 @@ Hierarchical equations of motion (HEOM) solver.
 - `engine`: `'eigen'` (default), `'mkl'`, or `'cuda'`
 - `liouville_order`: `'C'` (row-major) or `'F'` (column-major)
 - `solver`: time integrator: `'rk4'`, `'lsrk4'` (default), or `'rkdp'`
+- `unrolling`: enable compile-time static template for `n_level` (default: `True`);
+  effective only for `engine='eigen'` with `n_level` in {2, 3, 4}; ignored by MKL and CUDA
 - `n_tiers`: hierarchy truncation depth (required)
 - `n_inner_threads`: threads for inner matrix operations (default: 1)
 - `n_outer_threads`: threads for outer hierarchy loop; defaults to `OMP_NUM_THREADS`
@@ -42,7 +44,7 @@ Hierarchical equations of motion (HEOM) solver.
 
 ```python
 RedfieldSolver(H, noises, *, space='hilbert', format='dense', engine='eigen',
-                liouville_order='C', solver='lsrk4',
+                liouville_order='C', solver='lsrk4', unrolling=True,
                 n_inner_threads=1, n_outer_threads=None,
                 units=None, device=None)
 ```
