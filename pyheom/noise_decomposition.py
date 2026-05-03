@@ -236,21 +236,29 @@ def noise_decomposition(J, T, type_ltc, **kwargs):
     T : float
         Temperature.
     type_ltc : {'none', 'msd', 'psd', 'psd+fsd'}
-        Low-temperature correction. 'none' keeps only the spectral density poles.
+        Low-temperature correction method.
+    n_msd : int, optional
+        Number of Matsubara terms; required when `type_ltc='msd'`.
+    n_psd : int, optional
+        Number of Pade poles; required when `type_ltc='psd'` or `'psd+fsd'`.
+    type_psd : str, optional
+        Pade variant (e.g. `'N-1/N'`, `'N/N'`); required with `n_psd`.
+    n_fsd_rec : int, optional
+        Number of FSD recursion levels; required when `type_ltc='psd+fsd'`.
+    chi_fsd : float, optional
+        FSD scaling factor (`100.0` or `1000.0`); required when `type_ltc='psd+fsd'`.
 
     Returns
     -------
     BathCorrelation
         Set `.V` (system-bath coupling) before passing to a solver.
+
+    Examples
+    --------
+    >>> corr = noise_decomposition(J, T, 'none')
+    >>> corr = noise_decomposition(J, T, 'msd', n_msd=10)
+    >>> corr = noise_decomposition(J, T, 'psd', n_psd=1, type_psd='N-1/N')
+    >>> corr = noise_decomposition(J, T, 'psd+fsd', n_psd=1, type_psd='N/N',
+    ...                            n_fsd_rec=1, chi_fsd=100.0)
     """
     return calc_noise_params(*calc_noise_time_domain(J, T, type_ltc, **kwargs))
-
-# noise = calc_noise_params(*calc_noise_time_domain(None, T, 'psd+fsd', n_psd = 1, type_psd = 'N/N', n_fsd_rec=1, chi_fsd=100.0))
-# noise = calc_noise_params(*calc_noise_time_domain(J, T, 'psd+fsd',
-#                                                   n_psd = 1, type_psd = 'N/N',
-#                                                   n_fsd_rec=1, chi_fsd=100.0))
-# noise = calc_noise_params(*calc_noise_time_domain(J, T, 'psd',
-#                                                   n_psd = 1, type_psd = 'N-1/N'))
-# noise = calc_noise_params(*calc_noise_time_domain(J, T, 'msd',
-#                                                   n_msd = 10))
-# noise = calc_noise_params(*calc_noise_time_domain(J, T, 'NONE'))
