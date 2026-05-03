@@ -126,7 +126,7 @@ class QMESolver(ABC):
         c_format = FORMAT_CHAR[format.lower()]
         c_order  = ORDER_CHAR[c_contiguous]
         c_space  = self.space_char[space.lower()]
-        if unrolling and engine.lower() == 'eigen' and n_level in [2,]:
+        if unrolling and engine.lower() == 'eigen' and n_level in [2, 3, 4]:
             c_level = f'{n_level}'
         else:
             c_level = 'n'
@@ -387,14 +387,16 @@ class QMESolver(ABC):
     @classmethod
     def auto(cls, H, noises,
              engines=None, spaces=None, formats=None, solvers=None,
+             unrollings=None,
              dt=2.5e-3, n_warmup_steps=5, n_timing_steps=20,
              n_trials=3, tune=False, verbose=False, return_info=False,
              **kwargs):
         """Return the fastest solver configuration for this system.
 
-        Tries all combinations of engine, space, format, and ODE solver,
-        runs short warmup and timing trials on the caller's actual H and noises,
-        and returns the best-performing instance.
+        Tries all combinations of engine, space, format, ODE solver, and
+        (when applicable) template unrolling, runs short warmup and timing
+        trials on the caller's actual H and noises, and returns the
+        best-performing instance.
 
         Valid spaces are restricted to those supported by the calling class
         (e.g. RedfieldSolver has no 'ado' space).
@@ -410,6 +412,11 @@ class QMESolver(ABC):
             Formats to consider; defaults to ['dense', 'sparse'].
         solvers : list of str, optional
             ODE solvers to consider; defaults to ['lsrk4', 'rk4', 'rkdp'].
+        unrollings : list of bool, optional
+            Unrolling variants to test.  When None (default), both True and
+            False are tested for the eigen engine when n_level qualifies for
+            static template specialisation; all other engines always use the
+            dynamic template so only True is tested.
         dt : float
             Step size used for warmup and timing trials.
         n_warmup_steps, n_timing_steps : int
@@ -430,6 +437,16 @@ class QMESolver(ABC):
         from ._auto import _gpu_free_bytes, _thread_candidates, _solve_kwargs
         import time
 
+        # Static template specialisation is compiled only for eigen + n_level in [2, 3, 4].
+        n_level = H.shape[0]
+
+        def _engine_unrollings(engine):
+            if unrollings is not None:
+                return unrollings
+            if engine == 'eigen' and n_level in [2, 3, 4]:
+                return [True, False]
+            return [True]
+
         all_engines = ['eigen', 'mkl', 'cuda']
         avail = [e for e in all_engines
                  if getattr(_lb, f'{e}_is_supported', lambda: False)()]
@@ -442,7 +459,7 @@ class QMESolver(ABC):
 
         gpu_free = _gpu_free_bytes()
 
-        rho_0 = np.zeros((H.shape[0],) * 2, dtype=H.dtype)
+        rho_0 = np.zeros((n_level,) * 2, dtype=H.dtype)
         rho_0[0, 0] = 1.0
         if not H.flags.c_contiguous:
             rho_0 = np.asfortranarray(rho_0)
@@ -462,64 +479,72 @@ class QMESolver(ABC):
             for space in spaces:
                 for fmt in formats:
                     for solver in solvers:
-                        try:
-                            qme = cls(H, noises, engine=engine, space=space,
-                                      format=fmt, solver=solver, **kwargs)
-                        except AttributeError:
-                            continue
-
-                        kw_warmup = _solve_kwargs(solver, dt)
-
-                        # GPU memory guard: estimate RSS growth during warmup
-                        if engine == 'cuda' and gpu_free is not None:
-                            from ._auto import _rss_bytes
-                            before = _rss_bytes()
+                        for unrolling in _engine_unrollings(engine):
                             try:
-                                qme.solve(rho_0, t_warmup, **kw_warmup)
-                            except Exception:
-                                continue
-                            delta = max(0, _rss_bytes() - before)
-                            if delta * 5 > gpu_free:
-                                if verbose:
-                                    print(f'  SKIP {engine}/{space}/{fmt}/{solver}: '
-                                          f'est. {delta*5/1024**2:.0f} MiB '
-                                          f'> {gpu_free/1024**2:.0f} MiB GPU free')
-                                continue
-                        else:
-                            try:
-                                qme.solve(rho_0, t_warmup, **kw_warmup)
-                            except Exception:
+                                qme = cls(H, noises, engine=engine, space=space,
+                                          format=fmt, solver=solver,
+                                          unrolling=unrolling, **kwargs)
+                            except AttributeError:
                                 continue
 
-                        # Thread tuning (eigen/mkl, only when the class supports it)
-                        best_n = 1
-                        if tune and engine in ('eigen', 'mkl') \
-                                and 'n_outer_threads' in cls.optional_args:
-                            best_t = float('inf')
-                            for n in _thread_candidates():
+                            kw_warmup = _solve_kwargs(solver, dt)
+
+                            # GPU memory guard: estimate RSS growth during warmup
+                            if engine == 'cuda' and gpu_free is not None:
+                                from ._auto import _rss_bytes
+                                before = _rss_bytes()
                                 try:
-                                    q = cls(H, noises, engine=engine, space=space,
-                                            format=fmt, solver=solver,
-                                            n_outer_threads=n, **kwargs)
-                                except (AttributeError, KeyError):
+                                    qme.solve(rho_0, t_warmup, **kw_warmup)
+                                except Exception:
                                     continue
-                                q.solve(rho_0, t_warmup, **kw_warmup)
-                                t = _trial(q, solver)
-                                if t < best_t:
-                                    best_n, best_t, qme = n, t, q
-                            qme.solve(rho_0, t_warmup, **kw_warmup)
+                                delta = max(0, _rss_bytes() - before)
+                                if delta * 5 > gpu_free:
+                                    if verbose:
+                                        unrl_tag = 'on' if unrolling else 'off'
+                                        print(f'  SKIP {engine}/{space}/{fmt}/{solver}'
+                                              f'/unroll={unrl_tag}: '
+                                              f'est. {delta*5/1024**2:.0f} MiB '
+                                              f'> {gpu_free/1024**2:.0f} MiB GPU free')
+                                    continue
+                            else:
+                                try:
+                                    qme.solve(rho_0, t_warmup, **kw_warmup)
+                                except Exception:
+                                    continue
 
-                        elapsed = float(np.median([_trial(qme, solver)
-                                                   for _ in range(n_trials)]))
+                            # Thread tuning (eigen/mkl, only when the class supports it)
+                            best_n = 1
+                            if tune and engine in ('eigen', 'mkl') \
+                                    and 'n_outer_threads' in cls.optional_args:
+                                best_t = float('inf')
+                                for n in _thread_candidates():
+                                    try:
+                                        q = cls(H, noises, engine=engine, space=space,
+                                                format=fmt, solver=solver,
+                                                unrolling=unrolling,
+                                                n_outer_threads=n, **kwargs)
+                                    except (AttributeError, KeyError):
+                                        continue
+                                    q.solve(rho_0, t_warmup, **kw_warmup)
+                                    t = _trial(q, solver)
+                                    if t < best_t:
+                                        best_n, best_t, qme = n, t, q
+                                qme.solve(rho_0, t_warmup, **kw_warmup)
 
-                        entry = dict(engine=engine, space=space, format=fmt,
-                                     solver=solver, n_outer_threads=best_n,
-                                     elapsed=elapsed, instance=qme)
-                        results.append(entry)
+                            elapsed = float(np.median([_trial(qme, solver)
+                                                       for _ in range(n_trials)]))
 
-                        if verbose:
-                            print(f'  {engine:6s} {space:10s} {fmt:7s} {solver:6s} '
-                                  f'threads={best_n:<3d} {elapsed:.4f}s')
+                            unrl_tag = 'on' if unrolling else 'off'
+                            entry = dict(engine=engine, space=space, format=fmt,
+                                         solver=solver, unrolling=unrolling,
+                                         n_outer_threads=best_n,
+                                         elapsed=elapsed, instance=qme)
+                            results.append(entry)
+
+                            if verbose:
+                                print(f'  {engine:6s} {space:10s} {fmt:7s} {solver:6s} '
+                                      f'unroll={unrl_tag} threads={best_n:<3d} '
+                                      f'{elapsed:.4f}s')
 
         results.sort(key=lambda x: x['elapsed'])
         if not results:
