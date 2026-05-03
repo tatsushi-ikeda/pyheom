@@ -81,7 +81,7 @@ class Integrator:
     @property
     def rho(self):
         """Physical density matrix (view of the internal buffer)."""
-        return self._qme._rho[0]
+        return self._qme.rho
 
     @property
     def rho_hierarchy(self):
@@ -264,13 +264,19 @@ class qme_solver(ABC):
             self.solver_impl
         )
 
-        order = 'C' if self.c_contiguous else 'F'
+        # _rho must be C-contiguous: C++ addresses each hierarchy block as a
+        # flat array at offset lidx*n_level^2 regardless of the density-matrix
+        # order template parameter.  F-order would shift numpy's strides to
+        # stride-S intervals, causing reads from the wrong memory positions.
         self._rho = np.zeros((self.storage_size(), self.n_level, self.n_level),
-                             dtype=self.dtype, order=order)
+                             dtype=self.dtype, order='C')
 
     @property
     def rho(self):
-        return self._rho[0]
+        if self.c_contiguous:
+            return self._rho[0]
+        else:
+            return self._rho[0].T  # col_major: _rho stores transposed data; undo for Python
 
     @property
     def rho_hierarchy(self):
@@ -296,7 +302,10 @@ class qme_solver(ABC):
                     f'H and rho_0 have inconsistent dtype: {self.dtype} vs {rho_0.dtype}'
                 )
             self._rho[:] = 0
-            self._rho[0] = rho_0
+            if self.c_contiguous:
+                self._rho[0] = rho_0
+            else:
+                self._rho[0] = rho_0.T  # col_major: store transposed so C++ reads col-major layout
         elif rho_0.ndim == 3:
             # 3-D input: restart from a full hierarchy snapshot
             expected = self._rho.shape
@@ -341,7 +350,7 @@ class qme_solver(ABC):
         # internal combined callback collects expectation values
         def _cb(t):
             if e_ops is not None:
-                rho = self._rho[0]
+                rho = self.rho
                 for i, op in enumerate(e_ops):
                     expect_lists[i].append(np.trace(op @ rho))
             callback(t)
