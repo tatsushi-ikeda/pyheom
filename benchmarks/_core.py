@@ -54,15 +54,16 @@ def _rho0():
 # Solver factory
 # ---------------------------------------------------------------------------
 
-def build_solver(engine, space, fmt, solver='lsrk4', **kwargs):
+def build_solver(engine, space, fmt, solver='lsrk4', unrolling=True, **kwargs):
     """Build a HEOMSolver for the benchmark system.
 
     Returns None if the (engine, space, fmt) combination is not compiled.
+    unrolling=False forces dynamic n_level_c regardless of engine.
     """
     try:
         return HEOMSolver(_H(), [_corr()], engine=engine, space=space,
                           format=fmt, solver=solver, n_tiers=N_TIERS,
-                          n_inner_threads=1, **kwargs)
+                          n_inner_threads=1, unrolling=unrolling, **kwargs)
     except AttributeError:
         return None
 
@@ -83,10 +84,11 @@ def run_trial(qme, solver='lsrk4', t_final=T_FINAL, dt_callback=DT_CALLBACK):
 # Parameter grid
 # ---------------------------------------------------------------------------
 
-ALL_ENGINES = ['eigen', 'mkl', 'cuda']
-ALL_SPACES  = ['hilbert', 'liouville', 'ado']
-ALL_FORMATS = ['dense', 'sparse']
-ALL_SOLVERS = list(SOLVER_KWARGS)
+ALL_ENGINES    = ['eigen', 'mkl', 'cuda']
+ALL_SPACES     = ['hilbert', 'liouville', 'ado']
+ALL_FORMATS    = ['dense', 'sparse']
+ALL_SOLVERS    = list(SOLVER_KWARGS)
+ALL_UNROLLINGS = [True, False]
 
 
 def available_engines():
@@ -94,12 +96,15 @@ def available_engines():
             if getattr(_lb, f'{e}_is_supported', lambda: False)()]
 
 
-def full_grid(engines=None):
-    """All (engine, space, format, solver) tuples for the given engines."""
+def full_grid(engines=None, unrollings=None):
+    """All (engine, space, format, solver, unrolling) tuples for the given engines."""
     if engines is None:
         engines = available_engines()
-    return [(eng, sp, fmt, slv)
+    if unrollings is None:
+        unrollings = [True]
+    return [(eng, sp, fmt, slv, unrl)
             for eng in engines
             for sp  in ALL_SPACES
             for fmt in ALL_FORMATS
-            for slv in ALL_SOLVERS]
+            for slv in ALL_SOLVERS
+            for unrl in unrollings]

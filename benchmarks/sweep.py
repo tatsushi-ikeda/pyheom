@@ -27,7 +27,7 @@ if str(_root) not in sys.path:
 
 from benchmarks._core import (
     available_engines, full_grid, build_solver, run_trial,
-    ALL_ENGINES, ALL_SPACES, ALL_FORMATS, ALL_SOLVERS,
+    ALL_ENGINES, ALL_SPACES, ALL_FORMATS, ALL_SOLVERS, ALL_UNROLLINGS,
     T_FINAL, DT_CALLBACK,
 )
 from benchmarks._auto import auto_select
@@ -37,8 +37,8 @@ from benchmarks._auto import auto_select
 # Formatting
 # ---------------------------------------------------------------------------
 
-_COLS = ('engine', 'space', 'format', 'solver', 'threads', 'time(s)', 'mem(MiB)')
-_WIDTHS = (8, 11, 7, 7, 8, 10, 10)
+_COLS = ('engine', 'space', 'format', 'solver', 'unroll', 'threads', 'time(s)', 'mem(MiB)')
+_WIDTHS = (8, 11, 7, 7, 7, 8, 10, 10)
 _FMT_HDR = '  '.join(f'{{:<{w}}}' for w in _WIDTHS)
 _SEP = '-' * (sum(_WIDTHS) + 2 * (len(_WIDTHS) - 1))
 
@@ -47,6 +47,7 @@ def _row(r):
     tag = ' *' if r.get('recommended') else '  '
     return tag + _FMT_HDR.format(
         r['engine'], r['space'], r['format'], r['solver'],
+        'on' if r.get('unrolling', True) else 'off',
         str(r.get('n_outer_threads', '-')),
         f"{r['elapsed']:.3f}",
         f"{r.get('rss_delta_mb', 0.0):.1f}",
@@ -86,6 +87,9 @@ def main():
                         metavar='FORMAT')
     parser.add_argument('--solvers', nargs='+', choices=ALL_SOLVERS,
                         metavar='SOLVER')
+    parser.add_argument('--unrollings', nargs='+', choices=['on', 'off'],
+                        metavar='UNROLL',
+                        help='static template unrolling: on, off, or both (default: on)')
     parser.add_argument('--n-trials', type=int, default=3,
                         help='timing trials per combination (default: 3)')
     parser.add_argument('--t-final', type=float, default=T_FINAL,
@@ -94,35 +98,45 @@ def main():
                         help='save results as JSON')
     args = parser.parse_args()
 
+    unrollings = None
+    if args.unrollings:
+        unrollings = [u == 'on' for u in args.unrollings]
+
     if args.auto:
         results = auto_select(
             engines=args.engines or available_engines(),
             spaces=args.spaces   or ALL_SPACES,
             formats=args.formats or ALL_FORMATS,
             solvers=args.solvers or ALL_SOLVERS,
+            unrollings=unrollings or [True],
             n_trials=args.n_trials, verbose=True,
         )
     else:
-        engines = args.engines or available_engines()
+        engines    = args.engines or available_engines()
+        unrollings = unrollings or [True]
         grid = [
-            (eng, sp, fmt, slv)
-            for eng in engines
-            for sp  in (args.spaces  or ALL_SPACES)
-            for fmt in (args.formats or ALL_FORMATS)
-            for slv in (args.solvers or ALL_SOLVERS)
+            (eng, sp, fmt, slv, unrl)
+            for eng  in engines
+            for sp   in (args.spaces  or ALL_SPACES)
+            for fmt  in (args.formats or ALL_FORMATS)
+            for slv  in (args.solvers or ALL_SOLVERS)
+            for unrl in unrollings
         ]
 
         results = []
-        for engine, space, fmt, solver in grid:
-            qme = build_solver(engine, space, fmt, solver)
+        for engine, space, fmt, solver, unrolling in grid:
+            qme = build_solver(engine, space, fmt, solver, unrolling=unrolling)
             if qme is None:
                 continue
             times = [run_trial(qme, solver=solver, t_final=args.t_final)
                      for _ in range(args.n_trials)]
             elapsed = float(np.median(times))
+            unrl_tag = 'on' if unrolling else 'off'
             results.append(dict(engine=engine, space=space, format=fmt,
-                                solver=solver, elapsed=elapsed))
-            print(f'  {engine:6s} {space:10s} {fmt:7s} {solver:6s}  {elapsed:.3f}s')
+                                solver=solver, unrolling=unrolling,
+                                elapsed=elapsed))
+            print(f'  {engine:6s} {space:10s} {fmt:7s} {solver:6s} '
+                  f'unroll={unrl_tag}  {elapsed:.3f}s', flush=True)
 
         results.sort(key=lambda x: x['elapsed'])
 

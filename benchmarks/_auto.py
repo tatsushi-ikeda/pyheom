@@ -8,9 +8,25 @@ from multiprocessing import cpu_count
 from ._core import (
     build_solver, run_trial, available_engines,
     ALL_SPACES, ALL_FORMATS, SOLVER_KWARGS,
-    T_FINAL, DT_CALLBACK, DT,
+    T_FINAL, DT_CALLBACK, DT, _H,
 )
 from pyheom._auto import _rss_bytes, _gpu_free_bytes, _thread_candidates
+
+_BENCH_N_LEVEL = _H().shape[0]
+
+
+def _engine_unrollings(engine, user_unrollings):
+    """Return the unrolling list to test for a given engine.
+
+    When user_unrollings is None (auto), both True and False are tested for
+    eigen when the benchmark system size supports static template specialisation;
+    all other engines always use dynamic templates so only True is tested.
+    """
+    if user_unrollings is not None:
+        return user_unrollings
+    if engine == 'eigen' and _BENCH_N_LEVEL in [2, 3, 4]:
+        return [True, False]
+    return [True]
 
 
 # ---------------------------------------------------------------------------
@@ -43,11 +59,12 @@ def warmup(qme, solver='lsrk4'):
 # Thread tuning (CPU engines only)
 # ---------------------------------------------------------------------------
 
-def tune_threads(engine, space, fmt, solver, n_trials=2):
+def tune_threads(engine, space, fmt, solver, unrolling=True, n_trials=2):
     """Try several n_outer_threads values and return the best (n_threads, elapsed)."""
     best_n, best_t = 1, float('inf')
     for n in _thread_candidates():
-        qme = build_solver(engine, space, fmt, solver, n_outer_threads=n)
+        qme = build_solver(engine, space, fmt, solver, unrolling=unrolling,
+                           n_outer_threads=n)
         if qme is None:
             continue
         warmup(qme, solver=solver)
@@ -62,19 +79,19 @@ def tune_threads(engine, space, fmt, solver, n_trials=2):
 # ---------------------------------------------------------------------------
 
 def auto_select(engines=None, spaces=None, formats=None, solvers=None,
-                n_trials=3, tune=True, verbose=True):
+                unrollings=None, n_trials=3, tune=True, verbose=True):
     """Discover engines, estimate memory, warmup, optionally tune threads.
 
     Returns a list of result dicts sorted by elapsed time.
-    Each dict has keys: engine, space, format, solver, n_outer_threads,
+    Each dict has keys: engine, space, format, solver, unrolling, n_outer_threads,
     elapsed, rss_delta_mb.
     The recommended configuration is marked with key 'recommended': True.
     """
-    gpu_free  = _gpu_free_bytes()
-    engines   = engines if engines is not None else available_engines()
-    spaces    = spaces  if spaces  is not None else ALL_SPACES
-    formats   = formats if formats is not None else ALL_FORMATS
-    solvers   = solvers if solvers is not None else list(SOLVER_KWARGS)
+    gpu_free = _gpu_free_bytes()
+    engines  = engines if engines is not None else available_engines()
+    spaces   = spaces  if spaces  is not None else ALL_SPACES
+    formats  = formats if formats is not None else ALL_FORMATS
+    solvers  = solvers if solvers is not None else list(SOLVER_KWARGS)
 
     if verbose:
         print(f'Available engines : {engines}')
@@ -85,47 +102,56 @@ def auto_select(engines=None, spaces=None, formats=None, solvers=None,
     results = []
 
     for engine in engines:
+        engine_unrollings = _engine_unrollings(engine, unrollings)
         for space in spaces:
             for fmt in formats:
                 for solver in solvers:
-                    qme = build_solver(engine, space, fmt, solver)
-                    if qme is None:
-                        continue
-
-                    rss_delta = measure_rss_delta(warmup, qme, solver)
-
-                    if engine == 'cuda' and gpu_free is not None:
-                        if rss_delta * 5 > gpu_free:
-                            if verbose:
-                                print(f'  SKIP {engine}/{space}/{fmt}/{solver}: '
-                                      f'estimated {rss_delta*5/1024**2:.0f} MiB '
-                                      f'> {gpu_free/1024**2:.0f} MiB GPU free')
-                            continue
-
-                    best_n = 1
-                    if tune and engine in ('eigen', 'mkl'):
-                        best_n, _ = tune_threads(engine, space, fmt, solver)
+                    for unrolling in engine_unrollings:
                         qme = build_solver(engine, space, fmt, solver,
-                                           n_outer_threads=best_n)
+                                           unrolling=unrolling)
                         if qme is None:
                             continue
-                        warmup(qme, solver=solver)
 
-                    times = [run_trial(qme, solver=solver) for _ in range(n_trials)]
-                    elapsed = float(np.median(times))
+                        rss_delta = measure_rss_delta(warmup, qme, solver)
 
-                    entry = dict(
-                        engine=engine, space=space, format=fmt, solver=solver,
-                        n_outer_threads=best_n, elapsed=elapsed,
-                        rss_delta_mb=rss_delta / 1024**2,
-                    )
-                    results.append(entry)
+                        if engine == 'cuda' and gpu_free is not None:
+                            if rss_delta * 5 > gpu_free:
+                                if verbose:
+                                    unrl_tag = 'on' if unrolling else 'off'
+                                    print(f'  SKIP {engine}/{space}/{fmt}/{solver}'
+                                          f'/unroll={unrl_tag}: '
+                                          f'estimated {rss_delta*5/1024**2:.0f} MiB '
+                                          f'> {gpu_free/1024**2:.0f} MiB GPU free')
+                                continue
 
-                    if verbose:
-                        print(f'  {engine:6s} {space:10s} {fmt:7s} {solver:6s} '
-                              f'threads={best_n:<3d} '
-                              f'{elapsed:.3f}s  '
-                              f'mem~{rss_delta/1024**2:.1f}MiB')
+                        best_n = 1
+                        if tune and engine in ('eigen', 'mkl'):
+                            best_n, _ = tune_threads(engine, space, fmt, solver,
+                                                     unrolling=unrolling)
+                            qme = build_solver(engine, space, fmt, solver,
+                                               unrolling=unrolling,
+                                               n_outer_threads=best_n)
+                            if qme is None:
+                                continue
+                            warmup(qme, solver=solver)
+
+                        times = [run_trial(qme, solver=solver)
+                                 for _ in range(n_trials)]
+                        elapsed = float(np.median(times))
+
+                        entry = dict(
+                            engine=engine, space=space, format=fmt, solver=solver,
+                            unrolling=unrolling, n_outer_threads=best_n,
+                            elapsed=elapsed, rss_delta_mb=rss_delta / 1024**2,
+                        )
+                        results.append(entry)
+
+                        if verbose:
+                            unrl_tag = 'on' if unrolling else 'off'
+                            print(f'  {engine:6s} {space:10s} {fmt:7s} {solver:6s} '
+                                  f'unroll={unrl_tag} threads={best_n:<3d} '
+                                  f'{elapsed:.3f}s  '
+                                  f'mem~{rss_delta/1024**2:.1f}MiB')
 
     results.sort(key=lambda x: x['elapsed'])
     if results:
