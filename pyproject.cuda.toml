@@ -1,0 +1,48 @@
+# cibuildwheel config for CUDA wheel.
+#
+# Usage:
+#   cibuildwheel --config-file pyproject.cuda.toml .
+#
+# Requirements:
+#   - /opt/cuda/11.x must exist on the host (module load cuda/11.7)
+#   - podman must be available
+#
+# The host CUDA toolkit is bind-mounted read-only into the container so that
+# nvcc and the CUDA headers/libraries are available without baking CUDA into
+# the image.  The resulting wheel links against libcudart, libcublas, etc.
+# from the target system's CUDA installation (11.7+ or CUDA 12 via forward
+# compatibility).
+
+[build-system]
+requires = ["setuptools>=42", "wheel", "jinja2", "ninja"]
+build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+container-engine = { name = "podman", additional-docker-run-options = [
+    "-v", "/opt/cuda/11.x:/usr/local/cuda:ro",
+] }
+build = "cp39-* cp310-* cp311-* cp312-*"
+skip  = "*-musllinux*"
+
+before-build = "rm -rf /project/build"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64"
+
+environment = { PYHEOM_VARIANT = "cuda117",
+                CMAKE_ARGS    = "-DLIBHEOM_USE_CUDA=ON -DCUDA_ARCH_LIST=70;75;80;86",
+                PATH          = "/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                LD_LIBRARY_PATH = "/usr/local/cuda/lib64" }
+
+# Exclude CUDA runtime libraries from auditwheel bundling; they must be
+# provided by the target system's CUDA installation.
+repair-wheel-command = """\
+  auditwheel repair \
+    --exclude libcuda.so.1 \
+    --exclude libcudart.so.11.7 \
+    --exclude libcublas.so.11 \
+    --exclude libcublasLt.so.11 \
+    --exclude libnvrtc.so.11.7 \
+    -w {dest_dir} {wheel}\
+"""

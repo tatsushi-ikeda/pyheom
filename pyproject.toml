@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=42", "wheel", "jinja2", "ninja"]
+build-backend = "setuptools.build_meta"
+
+# ---------------------------------------------------------------------------
+# cibuildwheel -- Eigen (CPU-only) wheel
+#
+# Usage:
+#   cibuildwheel --config-file pyproject.toml .
+# ---------------------------------------------------------------------------
+
+[tool.cibuildwheel]
+container-engine = "podman"
+build = "cp39-* cp310-* cp311-* cp312-*"
+skip  = "*-musllinux*"
+
+# Jinja2 is required by the libheom CMake template system.
+# ninja speeds up the C++ build inside the container.
+before-build = "rm -rf /project/build"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64"
+
+# PYHEOM_VARIANT appends a local-version suffix (+eigen, +cuda117, ...) to
+# the wheel name so that Eigen and CUDA wheels can coexist in the same release.
+environment = { PYHEOM_VARIANT = "eigen" }

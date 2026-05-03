@@ -128,6 +128,10 @@ class CMakeBuild(build_ext):
 with open('VERSION.txt', 'r') as inp:
     version = inp.read().strip()
 
+variant = os.environ.get('PYHEOM_VARIANT', '')
+if variant:
+    version = f'{version}+{variant}'
+
 setup(
     name='pyheom',
     version=version,
