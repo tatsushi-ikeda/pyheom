@@ -85,8 +85,8 @@ def run_trial(qme, t_final=T_FINAL, dt_callback=DT_CALLBACK):
 # Parameter grid
 # ---------------------------------------------------------------------------
 
-ALL_ENGINES    = ['eigen', 'mkl', 'cuda']
-ALL_SPACES     = ['hilbert', 'liouville', 'ado']
+ALL_ENGINES    = ['Eigen', 'MKL', 'CUDA']
+ALL_SPACES     = ['Hilbert', 'Liouville', 'ADO']
 ALL_FORMATS    = ['dense', 'sparse']
 ALL_UNROLLINGS = [True, False]
 FIXED_SOLVER   = 'lsrk4'
@@ -94,7 +94,7 @@ FIXED_SOLVER   = 'lsrk4'
 
 def available_engines():
     return [e for e in ALL_ENGINES
-            if getattr(_lb, f'{e}_is_supported', lambda: False)()]
+            if getattr(_lb, f'{e.lower()}_is_supported', lambda: False)()]
 
 
 def full_grid(engines=None, unrollings=None):

@@ -43,8 +43,12 @@ def _gpu_free_bytes():
 
 
 def _thread_candidates():
-    """Candidate n_outer_threads values for Eigen thread tuning (1-D sweep)."""
-    max_t = int(os.environ.get('OMP_NUM_THREADS', cpu_count()))
+    """Candidate n_outer_threads values for Eigen thread tuning (1-D sweep).
+
+    Uses cpu_count() as the upper bound regardless of OMP_NUM_THREADS, because
+    the C++ OMP num_threads() clause overrides OMP_NUM_THREADS at runtime.
+    """
+    max_t = cpu_count()
     seen, candidates = set(), []
     for n in [1, 2, 4, 8, max_t]:
         if 1 <= n <= max_t and n not in seen:
@@ -63,8 +67,11 @@ def _thread_pair_candidates():
       Eigen/MKL internal threads with no outer OMP loop.
     The oversubscribed ceiling (max, max) is included as a sanity check;
     Eigen/MKL may throttle internally in that case.
+
+    Uses cpu_count() as the upper bound regardless of OMP_NUM_THREADS, because
+    the C++ OMP num_threads() clause overrides OMP_NUM_THREADS at runtime.
     """
-    max_t = int(os.environ.get('OMP_NUM_THREADS', cpu_count()))
+    max_t = cpu_count()
     pairs = set()
     for n in [1, 2, 4, 8, max_t]:
         if 1 <= n <= max_t:

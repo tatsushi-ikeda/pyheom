@@ -25,7 +25,7 @@ def _engine_unrollings(engine, user_unrollings):
     """
     if user_unrollings is not None:
         return user_unrollings
-    if engine == 'eigen' and _BENCH_N_LEVEL in [2, 3, 4]:
+    if engine == 'Eigen' and _BENCH_N_LEVEL in [2, 3, 4]:
         return [True, False]
     return [True]
 
@@ -59,22 +59,35 @@ def warmup(qme):
 # Thread tuning (CPU engines only)
 # ---------------------------------------------------------------------------
 
-def tune_threads(engine, space, fmt, solver, unrolling=True, n_trials=2):
-    """Find the best thread configuration and return (n_outer, n_inner, elapsed).
+_N_TUNE_STEPS = 10  # ODE steps per tuning trial; sufficient for relative ranking
 
-    Sweeps (n_outer_threads, n_inner_threads) pairs from _thread_pair_candidates().
-    n_outer controls the OMP outer loop (hilbert/liouville);
-    n_inner controls Eigen::setNbThreads / mkl_set_num_threads (ADO gemv and
-    per-node matrix ops).  Both are passed as constructor kwargs.
+
+def _tune_trial(qme, n_steps=_N_TUNE_STEPS):
+    """Run n_steps lsrk4 steps; dt_callback=DT so each step is one output."""
+    return run_trial(qme, t_final=n_steps * DT, dt_callback=DT)
+
+
+def tune_threads(engine, space, fmt, solver='lsrk4', unrolling=True,
+                 n_trials=2, n_tune_steps=_N_TUNE_STEPS, verbose=False):
+    """Find the best (n_outer, n_inner) thread pair and return (n_outer, n_inner, elapsed).
+
+    Uses short n_tune_steps-step runs (lsrk4) for ranking so tuning is fast.
+    The returned elapsed time is from the short run and not comparable to T_FINAL timings.
     """
     best_outer, best_inner, best_t = 1, 1, float('inf')
     for n_outer, n_inner in _thread_pair_candidates():
-        qme = build_solver(engine, space, fmt, solver, unrolling=unrolling,
+        qme = build_solver(engine, space, fmt, 'lsrk4', unrolling=unrolling,
                            n_outer_threads=n_outer, n_inner_threads=n_inner)
         if qme is None:
             continue
         warmup(qme)
-        elapsed = min(run_trial(qme) for _ in range(n_trials))
+        elapsed = min(_tune_trial(qme, n_tune_steps) for _ in range(n_trials))
+        if verbose:
+            mark = ''
+            if elapsed < best_t:
+                mark = ' <'
+            print(f'    tune omp={n_outer} inner={n_inner}: {elapsed*1e3:.1f}ms{mark}',
+                  flush=True)
         if elapsed < best_t:
             best_outer, best_inner, best_t = n_outer, n_inner, elapsed
     return best_outer, best_inner, best_t
@@ -87,7 +100,8 @@ def tune_threads(engine, space, fmt, solver, unrolling=True, n_trials=2):
 def auto_select(engine=None, engines=None,
                 space=None,  spaces=None,
                 format=None, formats=None,
-                unrollings=None, n_trials=3, tune=True, verbose=True):
+                unrollings=None, n_trials=3, tune=True,
+                n_tune_steps=_N_TUNE_STEPS, verbose=True):
     """Discover engines, estimate memory, warmup, optionally tune threads.
 
     Returns a list of result dicts sorted by elapsed time.
@@ -142,9 +156,10 @@ def auto_select(engine=None, engines=None,
                             continue
 
                     best_outer, best_inner = 1, 1
-                    if tune and eng in ('eigen', 'mkl'):
+                    if tune and eng in ('Eigen', 'MKL'):
                         best_outer, best_inner, _ = tune_threads(
-                            eng, sp, fmt, solver, unrolling=unrolling)
+                            eng, sp, fmt, solver, unrolling=unrolling,
+                            n_tune_steps=n_tune_steps)
                         qme = build_solver(eng, sp, fmt, solver,
                                            unrolling=unrolling,
                                            n_outer_threads=best_outer,

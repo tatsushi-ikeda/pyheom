@@ -41,7 +41,7 @@ corr.V = V
 # --- solver setup ---
 qme = HEOMSolver(
     H, [corr],
-    space='liouville', format='dense', engine='eigen',
+    space='Liouville', format='dense', engine='Eigen',
     liouville_order='C', solver='rkdp',
     n_tiers=n_tiers, n_inner_threads=4, n_outer_threads=1,
 )

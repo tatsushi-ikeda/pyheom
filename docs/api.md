@@ -5,7 +5,7 @@
 ### `HEOMSolver`
 
 ```python
-HEOMSolver(H, noises, *, space='hilbert', format='dense', engine='eigen',
+HEOMSolver(H, noises, *, space='Hilbert', format='dense', engine='Eigen',
             liouville_order='C', solver='lsrk4', unrolling=True, n_tiers,
             n_inner_threads=<auto>, n_outer_threads=1,
             units=None, device=None)
@@ -17,13 +17,13 @@ Hierarchical equations of motion (HEOM) solver.
 
 - `H`: system Hamiltonian, shape `(n, n)`, complex128
 - `noises`: list of `BathCorrelation` instances (one per bath coupling)
-- `space`: `'hilbert'` or `'liouville'`
+- `space`: `'Hilbert'`, `'Liouville'`, or `'ADO'`
 - `format`: `'dense'` or `'sparse'`
-- `engine`: `'eigen'` (default), `'mkl'`, or `'cuda'`
+- `engine`: `'Eigen'` (default), `'MKL'`, or `'CUDA'`
 - `liouville_order`: `'C'` (row-major) or `'F'` (column-major)
 - `solver`: time integrator: `'rk4'`, `'lsrk4'` (default), or `'rkdp'`
 - `unrolling`: enable compile-time static template for `n_level` (default: `True`);
-  effective only for `engine='eigen'` with `n_level` in {2, 3, 4}; ignored by MKL and CUDA
+  effective only for `engine='Eigen'` with `n_level` in {2, 3, 4}; ignored by MKL and CUDA
 - `n_tiers`: hierarchy truncation depth (required)
 - `n_inner_threads`: threads for inner matrix operations
   (`Eigen::setNbThreads` / `mkl_set_num_threads`);
@@ -31,10 +31,10 @@ Hierarchical equations of motion (HEOM) solver.
   Controls the primary parallelism for all spaces and engines
   (the only parallelism for ADO and CUDA).
 - `n_outer_threads`: threads for the OMP outer loop over hierarchy nodes
-  (hilbert and liouville spaces only; ignored by ADO and CUDA); default: 1.
+  (Hilbert and Liouville spaces only; ignored by ADO and CUDA); default: 1.
   Set to `OMP_NUM_THREADS` or `cpu_count()` to enable node-level parallelism.
 - `units`: dict with `'energy'` and/or `'time'` keys, e.g. `{'energy': unit.wavenumber, 'time': unit.femtosecond}`
-- `device`: CUDA device index; only valid when `engine='cuda'`
+- `device`: CUDA device index; only valid when `engine='CUDA'`
 
 **Properties**
 
@@ -49,7 +49,7 @@ Hierarchical equations of motion (HEOM) solver.
 ### `RedfieldSolver`
 
 ```python
-RedfieldSolver(H, noises, *, space='hilbert', format='dense', engine='eigen',
+RedfieldSolver(H, noises, *, space='Hilbert', format='dense', engine='Eigen',
                 liouville_order='C', solver='lsrk4', unrolling=True,
                 n_inner_threads=1, n_outer_threads=None,
                 units=None, device=None)
@@ -102,8 +102,8 @@ and ODE solver for the given system by running short timing trials.
 Returns a fully constructed solver instance ready for use.
 
 Valid spaces are restricted to those supported by the calling class:
-`HEOMSolver` searches hilbert, liouville, and ado;
-`RedfieldSolver` searches hilbert and liouville only.
+`HEOMSolver` searches Hilbert, Liouville, and ADO;
+`RedfieldSolver` searches Hilbert and Liouville only.
 
 **Parameters**
 
@@ -117,7 +117,7 @@ Valid spaces are restricted to those supported by the calling class:
 - `n_timing_steps`: steps in each timing call (default: `20`)
 - `n_trials`: timing trials per configuration; median is used (default: `3`)
 - `tune`: if `True`, sweep `(n_outer_threads, n_inner_threads)` pairs for
-  eigen/mkl engines to find the fastest thread configuration (default: `False`)
+  Eigen/MKL engines to find the fastest thread configuration (default: `False`)
 - `verbose`: print one line per configuration tried (default: `False`)
 - `return_info`: if `True`, return `(solver, info_dict)` instead of just the solver
 - `**kwargs`: forwarded to the constructor (e.g. `n_tiers` for `HEOMSolver`)

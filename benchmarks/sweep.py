@@ -30,7 +30,18 @@ from benchmarks._core import (
     ALL_ENGINES, ALL_SPACES, ALL_FORMATS, ALL_UNROLLINGS,
     T_FINAL, DT_CALLBACK,
 )
-from benchmarks._auto import auto_select
+from benchmarks._auto import auto_select, _N_TUNE_STEPS
+
+_ENGINE_NORM = {e.lower(): e for e in ALL_ENGINES}
+_SPACE_NORM  = {s.lower(): s for s in ALL_SPACES}
+
+
+def _norm_engine(s):
+    return _ENGINE_NORM.get(s.lower(), s)
+
+
+def _norm_space(s):
+    return _SPACE_NORM.get(s.lower(), s)
 
 
 # ---------------------------------------------------------------------------
@@ -80,10 +91,12 @@ def main():
         '--auto', action='store_true',
         help='discover available engines, estimate memory, warmup, tune threads',
     )
-    parser.add_argument('--engines', nargs='+', choices=ALL_ENGINES,
-                        metavar='ENGINE')
-    parser.add_argument('--spaces',  nargs='+', choices=ALL_SPACES,
-                        metavar='SPACE')
+    parser.add_argument('--engines', nargs='+', type=_norm_engine,
+                        choices=ALL_ENGINES, metavar='ENGINE',
+                        help=f'one or more of {ALL_ENGINES} (case-insensitive)')
+    parser.add_argument('--spaces',  nargs='+', type=_norm_space,
+                        choices=ALL_SPACES, metavar='SPACE',
+                        help=f'one or more of {ALL_SPACES} (case-insensitive)')
     parser.add_argument('--formats', nargs='+', choices=ALL_FORMATS,
                         metavar='FORMAT')
     parser.add_argument('--unrollings', nargs='+', choices=['on', 'off'],
@@ -98,6 +111,10 @@ def main():
                              'mkl_set_num_threads) (default: OMP_NUM_THREADS or cpu_count)')
     parser.add_argument('--n-trials', type=int, default=3,
                         help='timing trials per combination (default: 3)')
+    parser.add_argument('--n-tune-steps', type=int, default=_N_TUNE_STEPS,
+                        metavar='N',
+                        help=f'ODE steps per thread-tuning trial in --auto mode '
+                             f'(default: {_N_TUNE_STEPS})')
     parser.add_argument('--t-final', type=float, default=T_FINAL,
                         help=f'simulation end time (default: {T_FINAL})')
     parser.add_argument('--output', metavar='FILE',
@@ -114,7 +131,9 @@ def main():
             spaces=args.spaces   or ALL_SPACES,
             formats=args.formats or ALL_FORMATS,
             unrollings=unrollings or [True],
-            n_trials=args.n_trials, verbose=True,
+            n_trials=args.n_trials,
+            n_tune_steps=args.n_tune_steps,
+            verbose=True,
         )
     else:
         engines    = args.engines or available_engines()

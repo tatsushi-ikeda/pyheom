@@ -213,6 +213,15 @@ class QMESolver(ABC):
             if callable(self.qme_args[k]):
                 self.qme_args[k] = self.qme_args[k]()
 
+        # CUDA has no outer OMP loop; n_outer_threads > 1 would silently hang.
+        if engine == 'cuda':
+            n_outer = self.qme_args.get('n_outer_threads', 1)
+            if n_outer is not None and n_outer > 1:
+                raise ValueError(
+                    f"n_outer_threads={n_outer} is not supported for engine='CUDA'; "
+                    "CUDA handles parallelism internally via GPU threads."
+                )
+
         self.qme_impl = QMESolver.get_class(
             '{qme_name}_{c_dtype}{c_space}{c_format}{c_order}{c_order_liouville}{c_level}_{engine}',
             self.config)(

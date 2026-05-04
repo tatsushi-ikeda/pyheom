@@ -38,14 +38,14 @@ correction.
 ```python
 qme = HEOMSolver(
     H, [corr],
-    space='liouville', format='dense', engine='eigen',
+    space='Liouville', format='dense', engine='Eigen',
     liouville_order='C', solver='lsrk4',
     n_tiers=5, n_inner_threads=1, n_outer_threads=1,
 )
 ```
 
 `n_tiers=5` gives converged results for these parameters.
-Use `engine='cuda'` to run on GPU.
+Use `engine='CUDA'` to run on GPU.
 
 Alternatively, let pyheom benchmark all available engines and configurations
 and select the fastest one automatically:

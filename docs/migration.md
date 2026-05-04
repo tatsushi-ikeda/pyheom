@@ -81,7 +81,7 @@ solver = pyheom.HEOM(..., gpu_device=0, matrix_type='dense',
                      hierarchy_connection='loop')
 
 # v1.0
-solver = HEOMSolver(..., engine='cuda', device=0, format='dense', space='hilbert')
+solver = HEOMSolver(..., engine='CUDA', device=0, format='dense', space='Hilbert')
 ```
 
 ### Known bug in v0.5

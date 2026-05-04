@@ -40,7 +40,7 @@ corr.V = V
 # --- solver setup ---
 qme = RedfieldSolver(
     H, [corr],
-    space='liouville', format='dense', engine='eigen',
+    space='Liouville', format='dense', engine='Eigen',
     liouville_order='C', solver='lsrk4',
 )
 
