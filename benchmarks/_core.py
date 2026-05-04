@@ -1,5 +1,4 @@
 #  PyHEOM benchmark core -- system definition and shared utilities.
-#  Based on examples/basic/brownian_oscillator_heom.py (2-level Brownian oscillator).
 
 import time
 import numpy as np
@@ -7,7 +6,7 @@ import pyheom.pylibheom as _lb
 from pyheom import HEOMSolver, noise_decomposition, Brown
 
 # ---------------------------------------------------------------------------
-# System parameters (dimensionless, from brownian_oscillator_heom.py)
+# System parameters (dimensionless toy values)
 # ---------------------------------------------------------------------------
 LAMBDA_0 = 0.01
 OMEGA_0  = 1.0
@@ -72,11 +71,11 @@ def build_solver(engine, space, fmt, solver='lsrk4', unrolling=True, **kwargs):
 # Timing
 # ---------------------------------------------------------------------------
 
-def run_trial(qme, solver='lsrk4', t_final=T_FINAL, dt_callback=DT_CALLBACK):
+def run_trial(qme, t_final=T_FINAL, dt_callback=DT_CALLBACK):
     """Run one solve call; return wall-clock seconds."""
     t_list = np.arange(0.0, t_final + dt_callback * 0.5, dt_callback)
     t0 = time.perf_counter()
-    qme.solve(_rho0(), t_list, **solve_kwargs(solver))
+    qme.solve(_rho0(), t_list, **solve_kwargs(FIXED_SOLVER))
     return time.perf_counter() - t0
 
 
@@ -87,8 +86,8 @@ def run_trial(qme, solver='lsrk4', t_final=T_FINAL, dt_callback=DT_CALLBACK):
 ALL_ENGINES    = ['eigen', 'mkl', 'cuda']
 ALL_SPACES     = ['hilbert', 'liouville', 'ado']
 ALL_FORMATS    = ['dense', 'sparse']
-ALL_SOLVERS    = list(SOLVER_KWARGS)
 ALL_UNROLLINGS = [True, False]
+FIXED_SOLVER   = 'lsrk4'
 
 
 def available_engines():
@@ -97,14 +96,13 @@ def available_engines():
 
 
 def full_grid(engines=None, unrollings=None):
-    """All (engine, space, format, solver, unrolling) tuples for the given engines."""
+    """All (engine, space, format, unrolling) tuples for the given engines."""
     if engines is None:
         engines = available_engines()
     if unrollings is None:
         unrollings = [True]
-    return [(eng, sp, fmt, slv, unrl)
+    return [(eng, sp, fmt, unrl)
             for eng in engines
             for sp  in ALL_SPACES
             for fmt in ALL_FORMATS
-            for slv in ALL_SOLVERS
             for unrl in unrollings]

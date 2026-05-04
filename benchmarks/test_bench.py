@@ -17,7 +17,7 @@ pytest.importorskip('pytest_benchmark', reason='pytest-benchmark not installed; 
 
 from ._core import (
     available_engines, build_solver, solve_kwargs,
-    ALL_SPACES, ALL_FORMATS, ALL_SOLVERS, ALL_UNROLLINGS,
+    ALL_SPACES, ALL_FORMATS, ALL_UNROLLINGS, FIXED_SOLVER,
     T_FINAL, DT_CALLBACK, _rho0,
 )
 
@@ -27,24 +27,23 @@ def _params():
     for engine in available_engines():
         for space in ALL_SPACES:
             for fmt in ALL_FORMATS:
-                for solver in ALL_SOLVERS:
-                    for unrolling in ALL_UNROLLINGS:
-                        unrl_tag = 'unroll=on' if unrolling else 'unroll=off'
-                        params.append(pytest.param(
-                            engine, space, fmt, solver, unrolling,
-                            id=f'{engine}/{space}/{fmt}/{solver}/{unrl_tag}',
-                        ))
+                for unrolling in ALL_UNROLLINGS:
+                    unrl_tag = 'unroll=on' if unrolling else 'unroll=off'
+                    params.append(pytest.param(
+                        engine, space, fmt, unrolling,
+                        id=f'{engine}/{space}/{fmt}/{unrl_tag}',
+                    ))
     return params
 
 
-@pytest.mark.parametrize('engine,space,fmt,solver,unrolling', _params())
-def test_heom_solve(benchmark, engine, space, fmt, solver, unrolling):
-    """Time HEOMSolver.solve() across all engine/space/format/solver/unrolling combos."""
-    qme = build_solver(engine, space, fmt, solver, unrolling=unrolling)
+@pytest.mark.parametrize('engine,space,fmt,unrolling', _params())
+def test_heom_solve(benchmark, engine, space, fmt, unrolling):
+    """Time HEOMSolver.solve() across all engine/space/format/unrolling combos."""
+    qme = build_solver(engine, space, fmt, unrolling=unrolling)
     if qme is None:
-        pytest.skip(f'not compiled: {engine}/{space}/{fmt}/{solver}')
+        pytest.skip(f'not compiled: {engine}/{space}/{fmt}')
 
     t_list = np.arange(0.0, T_FINAL + DT_CALLBACK * 0.5, DT_CALLBACK)
     rho_0  = _rho0()
 
-    benchmark(qme.solve, rho_0, t_list, **solve_kwargs(solver))
+    benchmark(qme.solve, rho_0, t_list, **solve_kwargs(FIXED_SOLVER))
