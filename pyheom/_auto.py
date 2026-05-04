@@ -54,22 +54,22 @@ def _thread_candidates():
 
 
 def _thread_pair_candidates():
-    """Candidate (n_outer, n_blas) pairs for MKL 2-D thread tuning.
+    """Candidate (n_outer, n_inner) pairs for 2-D thread tuning.
 
-    The pairs cover three regimes independently:
-    - OMP-dominant (n_blas=1): good for hilbert/liouville where the outer
-      OMP loop over n_hrchy nodes is the bottleneck.
-    - BLAS-dominant (n_outer=1): good for ADO where a single large SpMV
-      uses MKL BLAS with no outer OMP loop.
-    - Oversubscribed (n_outer=max, n_blas=max): MKL may throttle internally;
-      useful as a sanity check.
+    The pairs independently cover two regimes:
+    - OMP-dominant (n_inner=1): for hilbert/liouville where the outer OMP
+      loop over n_hrchy nodes is the bottleneck.
+    - Inner-dominant (n_outer=1): for ADO where a single large gemv uses
+      Eigen/MKL internal threads with no outer OMP loop.
+    The oversubscribed ceiling (max, max) is included as a sanity check;
+    Eigen/MKL may throttle internally in that case.
     """
     max_t = int(os.environ.get('OMP_NUM_THREADS', cpu_count()))
     pairs = set()
     for n in [1, 2, 4, 8, max_t]:
         if 1 <= n <= max_t:
             pairs.add((n, 1))      # OMP-dominant
-            pairs.add((1, n))      # BLAS-dominant
+            pairs.add((1, n))      # inner-dominant
     pairs.add((max_t, max_t))      # oversubscribed ceiling
     return sorted(pairs)
 

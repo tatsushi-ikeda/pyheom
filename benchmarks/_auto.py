@@ -11,8 +11,7 @@ from ._core import (
     T_FINAL, DT_CALLBACK, DT, _H,
 )
 from pyheom._auto import (_rss_bytes, _gpu_free_bytes,
-                          _thread_candidates, _thread_pair_candidates,
-                          _set_blas_threads)
+                          _thread_candidates, _thread_pair_candidates)
 
 _BENCH_N_LEVEL = _H().shape[0]
 
@@ -61,30 +60,24 @@ def warmup(qme):
 # ---------------------------------------------------------------------------
 
 def tune_threads(engine, space, fmt, solver, unrolling=True, n_trials=2):
-    """Find the best thread configuration and return (n_outer, n_blas, elapsed).
+    """Find the best thread configuration and return (n_outer, n_inner, elapsed).
 
-    Eigen: 1-D sweep of n_outer_threads (n_blas is always 1).
-    MKL: 2-D sweep over (n_outer, n_blas) pairs covering OMP-dominant
-    (n_blas=1) and BLAS-dominant (n_outer=1) regimes independently.
-    Restores MKL BLAS threads to the winning value before returning.
+    Sweeps (n_outer_threads, n_inner_threads) pairs from _thread_pair_candidates().
+    n_outer controls the OMP outer loop (hilbert/liouville);
+    n_inner controls Eigen::setNbThreads / mkl_set_num_threads (ADO gemv and
+    per-node matrix ops).  Both are passed as constructor kwargs.
     """
-    best_outer, best_blas, best_t = 1, 1, float('inf')
-    pairs = (_thread_pair_candidates() if engine == 'mkl'
-             else [(n, 1) for n in _thread_candidates()])
-    for n_outer, n_blas in pairs:
-        if engine == 'mkl':
-            _set_blas_threads(n_blas)
+    best_outer, best_inner, best_t = 1, 1, float('inf')
+    for n_outer, n_inner in _thread_pair_candidates():
         qme = build_solver(engine, space, fmt, solver, unrolling=unrolling,
-                           n_outer_threads=n_outer)
+                           n_outer_threads=n_outer, n_inner_threads=n_inner)
         if qme is None:
             continue
         warmup(qme)
         elapsed = min(run_trial(qme) for _ in range(n_trials))
         if elapsed < best_t:
-            best_outer, best_blas, best_t = n_outer, n_blas, elapsed
-    if engine == 'mkl':
-        _set_blas_threads(best_blas)
-    return best_outer, best_blas, best_t
+            best_outer, best_inner, best_t = n_outer, n_inner, elapsed
+    return best_outer, best_inner, best_t
 
 
 # ---------------------------------------------------------------------------
@@ -148,13 +141,14 @@ def auto_select(engine=None, engines=None,
                                       f'> {gpu_free/1024**2:.0f} MiB GPU free')
                             continue
 
-                    best_outer, best_blas = 1, 1
+                    best_outer, best_inner = 1, 1
                     if tune and eng in ('eigen', 'mkl'):
-                        best_outer, best_blas, _ = tune_threads(
+                        best_outer, best_inner, _ = tune_threads(
                             eng, sp, fmt, solver, unrolling=unrolling)
                         qme = build_solver(eng, sp, fmt, solver,
                                            unrolling=unrolling,
-                                           n_outer_threads=best_outer)
+                                           n_outer_threads=best_outer,
+                                           n_inner_threads=best_inner)
                         if qme is None:
                             continue
                         warmup(qme)
@@ -165,18 +159,16 @@ def auto_select(engine=None, engines=None,
                     entry = dict(
                         engine=eng, space=sp, format=fmt, solver=solver,
                         unrolling=unrolling,
-                        n_outer_threads=best_outer, blas_threads=best_blas,
+                        n_outer_threads=best_outer, n_inner_threads=best_inner,
                         elapsed=elapsed, rss_delta_mb=rss_delta / 1024**2,
                     )
                     results.append(entry)
 
                     if verbose:
                         unrl_tag = 'on' if unrolling else 'off'
-                        thr_tag = (f'omp={best_outer} blas={best_blas}'
-                                   if eng == 'mkl'
-                                   else f'omp={best_outer}')
                         print(f'  {eng:6s} {sp:10s} {fmt:7s} '
-                              f'unroll={unrl_tag} {thr_tag} '
+                              f'unroll={unrl_tag} '
+                              f'omp={best_outer} inner={best_inner} '
                               f'{elapsed:.3f}s  '
                               f'mem~{rss_delta/1024**2:.1f}MiB')
 

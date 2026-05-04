@@ -443,8 +443,7 @@ class QMESolver(ABC):
         """
         import pyheom.pylibheom as _lb
         from ._auto import (_gpu_free_bytes, _thread_candidates,
-                            _thread_pair_candidates, _solve_kwargs,
-                            _set_blas_threads)
+                            _thread_pair_candidates, _solve_kwargs)
         import time
 
         # Static template specialisation is compiled only for eigen + n_level in [2, 3, 4].
@@ -530,55 +529,49 @@ class QMESolver(ABC):
                             except Exception:
                                 continue
 
-                        # Thread tuning.  Eigen: 1-D sweep of n_outer_threads
-                        # (OMP outer loop).  MKL: 2-D sweep over
-                        # (n_outer, n_blas) pairs -- the two axes are
-                        # orthogonal (outer covers hilbert/liouville OMP;
-                        # blas covers ADO single-SpMV via MKL BLAS).
-                        best_outer, best_blas = 1, 1
+                        # Thread tuning.  Eigen/MKL: 2-D sweep over
+                        # (n_outer, n_inner) pairs.  n_outer controls the
+                        # OMP loop over hierarchy nodes (hilbert/liouville);
+                        # n_inner controls Eigen::setNbThreads / mkl_set_num_threads
+                        # for the matrix ops within each node and for the ADO
+                        # single-gemv.  Both are passed as constructor kwargs.
+                        best_outer, best_inner = 1, 1
                         if tune and eng in ('eigen', 'mkl') \
                                 and 'n_outer_threads' in cls.optional_args:
                             best_t = float('inf')
-                            pairs = (_thread_pair_candidates()
-                                     if eng == 'mkl'
-                                     else [(n, 1) for n in _thread_candidates()])
-                            for n_outer, n_blas in pairs:
-                                if eng == 'mkl':
-                                    _set_blas_threads(n_blas)
+                            pairs = _thread_pair_candidates()
+                            for n_outer, n_inner in pairs:
                                 try:
                                     q = cls(H, noises, engine=eng, space=sp,
                                             format=fmt, solver=fixed_solver,
                                             unrolling=unrolling,
-                                            n_outer_threads=n_outer, **kwargs)
+                                            n_outer_threads=n_outer,
+                                            n_inner_threads=n_inner, **kwargs)
                                 except (AttributeError, KeyError):
                                     continue
                                 q.solve(rho_0, t_warmup, **kw_solve)
                                 t = _trial(q)
                                 if t < best_t:
-                                    best_outer, best_blas, best_t, qme = (
-                                        n_outer, n_blas, t, q)
-                            if eng == 'mkl':
-                                _set_blas_threads(best_blas)
+                                    best_outer, best_inner, best_t, qme = (
+                                        n_outer, n_inner, t, q)
                             qme.solve(rho_0, t_warmup, **kw_solve)
 
                         elapsed = float(np.median([_trial(qme)
                                                    for _ in range(n_trials)]))
 
                         unrl_tag = 'on' if unrolling else 'off'
-                        thr_tag = (f'omp={best_outer} blas={best_blas}'
-                                   if eng == 'mkl'
-                                   else f'omp={best_outer}')
+                        thr_tag = f'omp={best_outer} inner={best_inner}'
                         entry = dict(engine=eng, space=sp, format=fmt,
                                      solver=fixed_solver, unrolling=unrolling,
                                      n_outer_threads=best_outer,
-                                     blas_threads=best_blas,
+                                     n_inner_threads=best_inner,
                                      elapsed=elapsed, instance=qme)
                         results.append(entry)
 
                         if verbose:
                             print(f'  {eng:6s} {sp:10s} {fmt:7s} '
                                   f'unroll={unrl_tag} {thr_tag} '
-                                  f'{elapsed:.4f}s')
+                                  f'{elapsed:.4f}s', flush=True)
 
         results.sort(key=lambda x: x['elapsed'])
         if not results:

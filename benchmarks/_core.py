@@ -59,11 +59,12 @@ def build_solver(engine, space, fmt, solver='lsrk4', unrolling=True, **kwargs):
 
     Returns None if the (engine, space, fmt) combination is not compiled.
     unrolling=False forces dynamic n_level_c regardless of engine.
+    n_inner_threads and n_outer_threads can be passed via **kwargs.
     """
     try:
         return HEOMSolver(_H(), [_corr()], engine=engine, space=space,
                           format=fmt, solver=solver, n_tiers=N_TIERS,
-                          n_inner_threads=1, unrolling=unrolling, **kwargs)
+                          unrolling=unrolling, **kwargs)
     except AttributeError:
         return None
 
