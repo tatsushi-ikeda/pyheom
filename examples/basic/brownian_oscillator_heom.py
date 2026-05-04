@@ -6,7 +6,8 @@
 # ------------------------------------------------------------------------*/
 """2-level Brownian-oscillator HEOM simulation (dimensionless units).
 
-Writes population dynamics to pop.dat.
+Writes time, populations rho_00/rho_11, coherence Re/Im(rho_01), and
+trace Tr(rho) to brownian_oscillator_heom.dat.
 """
 
 import time
@@ -48,16 +49,29 @@ qme = HEOMSolver(
 rho_0 = np.zeros((2, 2), dtype=np.complex128)
 rho_0[0, 0] = 1.0
 
+# --- print solver summary ---
+n_hrchy = qme.init(rho_0, dt=0.25e-2).rho_hierarchy.shape[0]
+print(f'HEOM  n_level={qme.n_level}  n_tiers={n_tiers}  n_hrchy={n_hrchy}', file=stderr)
+print(f'      lambda_0={lambda_0}  omega_0={omega_0}  zeta={zeta}  T={T}', file=stderr)
+
 # --- time evolution ---
 callback_dt = 2.5e-2
 t_end       = 25.0
 t_list      = np.arange(0.0, t_end, callback_dt)
 
-with open('pop.dat', 'w') as out, tqdm.tqdm(total=t_end) as bar:
-    print('# time  rho_00  rho_11', file=out)
+_fmt = '{:12.6f}  {:14.10f}  {:14.10f}  {:+14.10f}  {:+14.10f}  {:14.10f}'
+
+with open('brownian_oscillator_heom.dat', 'w') as out, tqdm.tqdm(total=t_end) as bar:
+    print(f'# lambda_0={lambda_0}  omega_0={omega_0}  zeta={zeta}  T={T}'
+          f'  n_tiers={n_tiers}  n_hrchy={n_hrchy}', file=out)
+    print('# {:>10s}  {:>14s}  {:>14s}  {:>14s}  {:>14s}  {:>14s}'.format(
+        't', 'rho_00', 'rho_11', 'Re(rho_01)', 'Im(rho_01)', 'Tr(rho)'), file=out)
     def callback(t):
         bar.update(callback_dt)
-        print(t, qme.rho[0, 0].real, qme.rho[1, 1].real, file=out)
+        rho = qme.rho
+        coh = rho[0, 1]
+        tr  = rho[0, 0].real + rho[1, 1].real
+        print(_fmt.format(t, rho[0,0].real, rho[1,1].real, coh.real, coh.imag, tr), file=out)
         out.flush()
     t0 = time.time()
     qme.solve(rho_0, t_list, callback=callback, dt=0.25e-2)

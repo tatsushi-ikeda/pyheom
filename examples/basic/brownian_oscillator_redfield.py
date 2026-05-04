@@ -8,7 +8,8 @@
 
 Same system as brownian_oscillator_heom.py; compare outputs to assess the
 Redfield approximation against the full HEOM result.
-Writes population dynamics to pop_redfield.dat.
+Writes time, populations rho_00/rho_11, coherence Re/Im(rho_01), and
+trace Tr(rho) to brownian_oscillator_redfield.dat.
 """
 
 import time
@@ -46,16 +47,27 @@ qme = RedfieldSolver(
 rho_0 = np.zeros((2, 2), dtype=np.complex128)
 rho_0[0, 0] = 1.0
 
+# --- print solver summary ---
+print(f'Redfield  n_level={qme.n_level}', file=stderr)
+print(f'          lambda_0={lambda_0}  omega_0={omega_0}  zeta={zeta}  T={T}', file=stderr)
+
 # --- time evolution ---
 callback_dt = 2.5e-2
 t_end       = 25.0
 t_list      = np.arange(0.0, t_end, callback_dt)
 
-with open('pop_redfield.dat', 'w') as out, tqdm.tqdm(total=t_end) as bar:
-    print('# time  rho_00  rho_11', file=out)
+_fmt = '{:12.6f}  {:14.10f}  {:14.10f}  {:+14.10f}  {:+14.10f}  {:14.10f}'
+
+with open('brownian_oscillator_redfield.dat', 'w') as out, tqdm.tqdm(total=t_end) as bar:
+    print(f'# lambda_0={lambda_0}  omega_0={omega_0}  zeta={zeta}  T={T}', file=out)
+    print('# {:>10s}  {:>14s}  {:>14s}  {:>14s}  {:>14s}  {:>14s}'.format(
+        't', 'rho_00', 'rho_11', 'Re(rho_01)', 'Im(rho_01)', 'Tr(rho)'), file=out)
     def callback(t):
         bar.update(callback_dt)
-        print(t, qme.rho[0, 0].real, qme.rho[1, 1].real, file=out)
+        rho = qme.rho
+        coh = rho[0, 1]
+        tr  = rho[0, 0].real + rho[1, 1].real
+        print(_fmt.format(t, rho[0,0].real, rho[1,1].real, coh.real, coh.imag, tr), file=out)
         out.flush()
     t0 = time.time()
     qme.solve(rho_0, t_list, callback=callback, dt=0.25e-2)
