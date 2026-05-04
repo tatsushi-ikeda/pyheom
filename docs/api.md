@@ -7,7 +7,7 @@
 ```python
 HEOMSolver(H, noises, *, space='hilbert', format='dense', engine='eigen',
             liouville_order='C', solver='lsrk4', unrolling=True, n_tiers,
-            n_inner_threads=1, n_outer_threads=None,
+            n_inner_threads=<auto>, n_outer_threads=1,
             units=None, device=None)
 ```
 
@@ -25,8 +25,14 @@ Hierarchical equations of motion (HEOM) solver.
 - `unrolling`: enable compile-time static template for `n_level` (default: `True`);
   effective only for `engine='eigen'` with `n_level` in {2, 3, 4}; ignored by MKL and CUDA
 - `n_tiers`: hierarchy truncation depth (required)
-- `n_inner_threads`: threads for inner matrix operations (default: 1)
-- `n_outer_threads`: threads for outer hierarchy loop; defaults to `OMP_NUM_THREADS`
+- `n_inner_threads`: threads for inner matrix operations
+  (`Eigen::setNbThreads` / `mkl_set_num_threads`);
+  default: `OMP_NUM_THREADS` env var if set, otherwise `cpu_count()`.
+  Controls the primary parallelism for all spaces and engines
+  (the only parallelism for ADO and CUDA).
+- `n_outer_threads`: threads for the OMP outer loop over hierarchy nodes
+  (hilbert and liouville spaces only; ignored by ADO and CUDA); default: 1.
+  Set to `OMP_NUM_THREADS` or `cpu_count()` to enable node-level parallelism.
 - `units`: dict with `'energy'` and/or `'time'` keys, e.g. `{'energy': unit.wavenumber, 'time': unit.femtosecond}`
 - `device`: CUDA device index; only valid when `engine='cuda'`
 
@@ -110,7 +116,8 @@ Valid spaces are restricted to those supported by the calling class:
 - `n_warmup_steps`: steps in each warmup call (default: `5`)
 - `n_timing_steps`: steps in each timing call (default: `20`)
 - `n_trials`: timing trials per configuration; median is used (default: `3`)
-- `tune`: if `True`, sweep `n_outer_threads` for eigen/mkl (default: `False`)
+- `tune`: if `True`, sweep `(n_outer_threads, n_inner_threads)` pairs for
+  eigen/mkl engines to find the fastest thread configuration (default: `False`)
 - `verbose`: print one line per configuration tried (default: `False`)
 - `return_info`: if `True`, return `(solver, info_dict)` instead of just the solver
 - `**kwargs`: forwarded to the constructor (e.g. `n_tiers` for `HEOMSolver`)
@@ -119,7 +126,7 @@ Valid spaces are restricted to those supported by the calling class:
 
 The best solver instance, or `(instance, info)` when `return_info=True`.
 `info` is a dict with keys `engine`, `space`, `format`, `solver`,
-`n_outer_threads`, and `elapsed` (median timing trial time in seconds).
+`n_outer_threads`, `n_inner_threads`, and `elapsed` (median timing trial time in seconds).
 
 **Example**
 
