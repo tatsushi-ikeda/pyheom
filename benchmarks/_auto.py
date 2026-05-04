@@ -10,7 +10,9 @@ from ._core import (
     ALL_SPACES, ALL_FORMATS,
     T_FINAL, DT_CALLBACK, DT, _H,
 )
-from pyheom._auto import _rss_bytes, _gpu_free_bytes, _thread_candidates, _set_blas_threads
+from pyheom._auto import (_rss_bytes, _gpu_free_bytes,
+                          _thread_candidates, _thread_pair_candidates,
+                          _set_blas_threads)
 
 _BENCH_N_LEVEL = _H().shape[0]
 
@@ -59,27 +61,30 @@ def warmup(qme):
 # ---------------------------------------------------------------------------
 
 def tune_threads(engine, space, fmt, solver, unrolling=True, n_trials=2):
-    """Try several thread counts and return the best (n_threads, elapsed).
+    """Find the best thread configuration and return (n_outer, n_blas, elapsed).
 
-    For MKL, sets both n_outer_threads (OMP outer loop) and MKL BLAS threads
-    to the same value N so that both ADO/BLAS and hilbert/liouville OMP paths
-    benefit.  Restores BLAS threads to the best value before returning.
+    Eigen: 1-D sweep of n_outer_threads (n_blas is always 1).
+    MKL: 2-D sweep over (n_outer, n_blas) pairs covering OMP-dominant
+    (n_blas=1) and BLAS-dominant (n_outer=1) regimes independently.
+    Restores MKL BLAS threads to the winning value before returning.
     """
-    best_n, best_t = 1, float('inf')
-    for n in _thread_candidates():
+    best_outer, best_blas, best_t = 1, 1, float('inf')
+    pairs = (_thread_pair_candidates() if engine == 'mkl'
+             else [(n, 1) for n in _thread_candidates()])
+    for n_outer, n_blas in pairs:
         if engine == 'mkl':
-            _set_blas_threads(n)
+            _set_blas_threads(n_blas)
         qme = build_solver(engine, space, fmt, solver, unrolling=unrolling,
-                           n_outer_threads=n)
+                           n_outer_threads=n_outer)
         if qme is None:
             continue
         warmup(qme)
         elapsed = min(run_trial(qme) for _ in range(n_trials))
         if elapsed < best_t:
-            best_n, best_t = n, elapsed
+            best_outer, best_blas, best_t = n_outer, n_blas, elapsed
     if engine == 'mkl':
-        _set_blas_threads(best_n)
-    return best_n, best_t
+        _set_blas_threads(best_blas)
+    return best_outer, best_blas, best_t
 
 
 # ---------------------------------------------------------------------------
@@ -143,13 +148,13 @@ def auto_select(engine=None, engines=None,
                                       f'> {gpu_free/1024**2:.0f} MiB GPU free')
                             continue
 
-                    best_n = 1
+                    best_outer, best_blas = 1, 1
                     if tune and eng in ('eigen', 'mkl'):
-                        best_n, _ = tune_threads(eng, sp, fmt, solver,
-                                                 unrolling=unrolling)
+                        best_outer, best_blas, _ = tune_threads(
+                            eng, sp, fmt, solver, unrolling=unrolling)
                         qme = build_solver(eng, sp, fmt, solver,
                                            unrolling=unrolling,
-                                           n_outer_threads=best_n)
+                                           n_outer_threads=best_outer)
                         if qme is None:
                             continue
                         warmup(qme)
@@ -159,15 +164,19 @@ def auto_select(engine=None, engines=None,
 
                     entry = dict(
                         engine=eng, space=sp, format=fmt, solver=solver,
-                        unrolling=unrolling, n_outer_threads=best_n,
+                        unrolling=unrolling,
+                        n_outer_threads=best_outer, blas_threads=best_blas,
                         elapsed=elapsed, rss_delta_mb=rss_delta / 1024**2,
                     )
                     results.append(entry)
 
                     if verbose:
                         unrl_tag = 'on' if unrolling else 'off'
+                        thr_tag = (f'omp={best_outer} blas={best_blas}'
+                                   if eng == 'mkl'
+                                   else f'omp={best_outer}')
                         print(f'  {eng:6s} {sp:10s} {fmt:7s} '
-                              f'unroll={unrl_tag} threads={best_n:<3d} '
+                              f'unroll={unrl_tag} {thr_tag} '
                               f'{elapsed:.3f}s  '
                               f'mem~{rss_delta/1024**2:.1f}MiB')
 

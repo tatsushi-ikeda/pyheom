@@ -43,7 +43,7 @@ def _gpu_free_bytes():
 
 
 def _thread_candidates():
-    """Candidate n_outer_threads values to sweep during thread tuning."""
+    """Candidate n_outer_threads values for Eigen thread tuning (1-D sweep)."""
     max_t = int(os.environ.get('OMP_NUM_THREADS', cpu_count()))
     seen, candidates = set(), []
     for n in [1, 2, 4, 8, max_t]:
@@ -51,6 +51,27 @@ def _thread_candidates():
             seen.add(n)
             candidates.append(n)
     return candidates
+
+
+def _thread_pair_candidates():
+    """Candidate (n_outer, n_blas) pairs for MKL 2-D thread tuning.
+
+    The pairs cover three regimes independently:
+    - OMP-dominant (n_blas=1): good for hilbert/liouville where the outer
+      OMP loop over n_hrchy nodes is the bottleneck.
+    - BLAS-dominant (n_outer=1): good for ADO where a single large SpMV
+      uses MKL BLAS with no outer OMP loop.
+    - Oversubscribed (n_outer=max, n_blas=max): MKL may throttle internally;
+      useful as a sanity check.
+    """
+    max_t = int(os.environ.get('OMP_NUM_THREADS', cpu_count()))
+    pairs = set()
+    for n in [1, 2, 4, 8, max_t]:
+        if 1 <= n <= max_t:
+            pairs.add((n, 1))      # OMP-dominant
+            pairs.add((1, n))      # BLAS-dominant
+    pairs.add((max_t, max_t))      # oversubscribed ceiling
+    return sorted(pairs)
 
 
 def _set_blas_threads(n):

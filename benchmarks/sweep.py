@@ -31,15 +31,15 @@ from benchmarks._core import (
     T_FINAL, DT_CALLBACK,
 )
 from benchmarks._auto import auto_select
-from pyheom._auto import _set_blas_threads
+from pyheom._auto import _set_blas_threads, _thread_pair_candidates
 
 
 # ---------------------------------------------------------------------------
 # Formatting
 # ---------------------------------------------------------------------------
 
-_COLS = ('engine', 'space', 'format', 'unroll', 'threads', 'time(s)', 'mem(MiB)')
-_WIDTHS = (8, 11, 7, 7, 8, 10, 10)
+_COLS = ('engine', 'space', 'format', 'unroll', 'omp', 'blas', 'time(s)', 'mem(MiB)')
+_WIDTHS = (8, 11, 7, 7, 5, 5, 10, 10)
 _FMT_HDR = '  '.join(f'{{:<{w}}}' for w in _WIDTHS)
 _SEP = '-' * (sum(_WIDTHS) + 2 * (len(_WIDTHS) - 1))
 
@@ -50,6 +50,7 @@ def _row(r):
         r['engine'], r['space'], r['format'],
         'on' if r.get('unrolling', True) else 'off',
         str(r.get('n_outer_threads', '-')),
+        str(r.get('blas_threads', '-')),
         f"{r['elapsed']:.3f}",
         f"{r.get('rss_delta_mb', 0.0):.1f}",
     )
@@ -89,9 +90,12 @@ def main():
     parser.add_argument('--unrollings', nargs='+', choices=['on', 'off'],
                         metavar='UNROLL',
                         help='static template unrolling: on, off, or both (default: on)')
-    parser.add_argument('--n-threads', nargs='+', type=int, metavar='N',
-                        help='thread counts to sweep; sets n_outer_threads and '
-                             'MKL BLAS threads to N (default: use environment)')
+    parser.add_argument('--n-outer-threads', nargs='+', type=int, metavar='N',
+                        help='OMP outer-loop thread counts to sweep '
+                             '(default: use environment)')
+    parser.add_argument('--blas-threads', nargs='+', type=int, metavar='N',
+                        help='MKL BLAS internal thread counts to sweep; '
+                             'no-op for eigen (default: 1)')
     parser.add_argument('--n-trials', type=int, default=3,
                         help='timing trials per combination (default: 3)')
     parser.add_argument('--t-final', type=float, default=T_FINAL,
@@ -113,37 +117,53 @@ def main():
             n_trials=args.n_trials, verbose=True,
         )
     else:
-        engines       = args.engines or available_engines()
-        unrollings    = unrollings or [True]
-        n_threads_list = args.n_threads  # None or list of ints
+        engines    = args.engines or available_engines()
+        unrollings = unrollings or [True]
+        omp_list   = args.n_outer_threads  # None or list of ints
+        blas_list  = args.blas_threads     # None or list of ints
+        # Build Cartesian product of (n_outer, n_blas) thread pairs.
+        # When neither flag is given, use a single (None, None) pair so
+        # the solver falls back to the environment defaults.
+        if omp_list is None and blas_list is None:
+            thread_pairs = [(None, None)]
+        else:
+            thread_pairs = [
+                (no, nb)
+                for no in (omp_list or [None])
+                for nb in (blas_list or [1])
+            ]
+
         grid = [
-            (eng, sp, fmt, unrl, nt)
+            (eng, sp, fmt, unrl, no, nb)
             for eng  in engines
             for sp   in (args.spaces  or ALL_SPACES)
             for fmt  in (args.formats or ALL_FORMATS)
             for unrl in unrollings
-            for nt   in (n_threads_list or [None])
+            for no, nb in thread_pairs
         ]
 
         results = []
-        for engine, space, fmt, unrolling, n_threads in grid:
+        for engine, space, fmt, unrolling, n_outer, n_blas in grid:
             solver_kw = {}
-            if n_threads is not None:
-                _set_blas_threads(n_threads)
-                solver_kw['n_outer_threads'] = n_threads
+            if n_blas is not None:
+                _set_blas_threads(n_blas)
+            if n_outer is not None:
+                solver_kw['n_outer_threads'] = n_outer
             qme = build_solver(engine, space, fmt, unrolling=unrolling, **solver_kw)
             if qme is None:
                 continue
             times = [run_trial(qme, t_final=args.t_final)
                      for _ in range(args.n_trials)]
             elapsed = float(np.median(times))
-            unrl_tag = 'on' if unrolling else 'off'
-            thr_tag  = str(n_threads) if n_threads is not None else '-'
+            unrl_tag  = 'on' if unrolling else 'off'
+            outer_tag = str(n_outer) if n_outer is not None else '-'
+            blas_tag  = str(n_blas)  if n_blas  is not None else '-'
             results.append(dict(engine=engine, space=space, format=fmt,
                                 unrolling=unrolling, elapsed=elapsed,
-                                n_outer_threads=n_threads))
+                                n_outer_threads=n_outer, blas_threads=n_blas))
             print(f'  {engine:6s} {space:10s} {fmt:7s} '
-                  f'unroll={unrl_tag} threads={thr_tag:<3s} {elapsed:.3f}s',
+                  f'unroll={unrl_tag} omp={outer_tag:<3s} blas={blas_tag:<3s} '
+                  f'{elapsed:.3f}s',
                   flush=True)
 
         results.sort(key=lambda x: x['elapsed'])
