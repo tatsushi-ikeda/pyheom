@@ -53,6 +53,27 @@ def _thread_candidates():
     return candidates
 
 
+def _set_blas_threads(n):
+    """Set MKL BLAS internal thread count; no-op if libmkl_rt.so is unavailable."""
+    try:
+        import ctypes
+        lib = ctypes.CDLL('libmkl_rt.so', mode=ctypes.RTLD_GLOBAL)
+        lib.MKL_Set_Num_Threads(ctypes.c_int(n))
+    except OSError:
+        pass
+
+
+def _get_blas_threads():
+    """Return current MKL BLAS thread count, or None if libmkl_rt.so is unavailable."""
+    try:
+        import ctypes
+        lib = ctypes.CDLL('libmkl_rt.so', mode=ctypes.RTLD_GLOBAL)
+        lib.MKL_Get_Max_Threads.restype = ctypes.c_int
+        return int(lib.MKL_Get_Max_Threads())
+    except OSError:
+        return None
+
+
 def _solve_kwargs(solver, dt):
     """Return kwargs for qme.solve() appropriate for the given solver."""
     if solver == 'rkdp':

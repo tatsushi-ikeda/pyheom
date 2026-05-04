@@ -442,7 +442,8 @@ class QMESolver(ABC):
             (e.g. n_tiers for HEOMSolver, solver= to fix the ODE solver).
         """
         import pyheom.pylibheom as _lb
-        from ._auto import _gpu_free_bytes, _thread_candidates, _solve_kwargs
+        from ._auto import (_gpu_free_bytes, _thread_candidates, _solve_kwargs,
+                            _set_blas_threads)
         import time
 
         # Static template specialisation is compiled only for eigen + n_level in [2, 3, 4].
@@ -528,12 +529,16 @@ class QMESolver(ABC):
                             except Exception:
                                 continue
 
-                        # Thread tuning (eigen/mkl, only when the class supports it)
+                        # Thread tuning: sweep n_outer_threads (OMP) and MKL
+                        # BLAS threads together (same N covers both ADO/BLAS
+                        # and hilbert/liouville OMP cases).
                         best_n = 1
                         if tune and eng in ('eigen', 'mkl') \
                                 and 'n_outer_threads' in cls.optional_args:
                             best_t = float('inf')
                             for n in _thread_candidates():
+                                if eng == 'mkl':
+                                    _set_blas_threads(n)
                                 try:
                                     q = cls(H, noises, engine=eng, space=sp,
                                             format=fmt, solver=fixed_solver,
@@ -545,6 +550,8 @@ class QMESolver(ABC):
                                 t = _trial(q)
                                 if t < best_t:
                                     best_n, best_t, qme = n, t, q
+                            if eng == 'mkl':
+                                _set_blas_threads(best_n)
                             qme.solve(rho_0, t_warmup, **kw_solve)
 
                         elapsed = float(np.median([_trial(qme)

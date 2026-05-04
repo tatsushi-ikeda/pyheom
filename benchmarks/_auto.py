@@ -10,7 +10,7 @@ from ._core import (
     ALL_SPACES, ALL_FORMATS,
     T_FINAL, DT_CALLBACK, DT, _H,
 )
-from pyheom._auto import _rss_bytes, _gpu_free_bytes, _thread_candidates
+from pyheom._auto import _rss_bytes, _gpu_free_bytes, _thread_candidates, _set_blas_threads
 
 _BENCH_N_LEVEL = _H().shape[0]
 
@@ -59,9 +59,16 @@ def warmup(qme):
 # ---------------------------------------------------------------------------
 
 def tune_threads(engine, space, fmt, solver, unrolling=True, n_trials=2):
-    """Try several n_outer_threads values and return the best (n_threads, elapsed)."""
+    """Try several thread counts and return the best (n_threads, elapsed).
+
+    For MKL, sets both n_outer_threads (OMP outer loop) and MKL BLAS threads
+    to the same value N so that both ADO/BLAS and hilbert/liouville OMP paths
+    benefit.  Restores BLAS threads to the best value before returning.
+    """
     best_n, best_t = 1, float('inf')
     for n in _thread_candidates():
+        if engine == 'mkl':
+            _set_blas_threads(n)
         qme = build_solver(engine, space, fmt, solver, unrolling=unrolling,
                            n_outer_threads=n)
         if qme is None:
@@ -70,6 +77,8 @@ def tune_threads(engine, space, fmt, solver, unrolling=True, n_trials=2):
         elapsed = min(run_trial(qme) for _ in range(n_trials))
         if elapsed < best_t:
             best_n, best_t = n, elapsed
+    if engine == 'mkl':
+        _set_blas_threads(best_n)
     return best_n, best_t
 
 
