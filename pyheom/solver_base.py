@@ -535,7 +535,10 @@ class QMESolver(ABC):
                         # n_inner controls Eigen::setNbThreads / mkl_set_num_threads
                         # for the matrix ops within each node and for the ADO
                         # single-gemv.  Both are passed as constructor kwargs.
-                        best_outer, best_inner = 1, 1
+                        def _resolve(v):
+                            return v() if callable(v) else v
+                        best_outer = _resolve(cls.optional_args.get('n_outer_threads', 1))
+                        best_inner = _resolve(cls.optional_args.get('n_inner_threads', 1))
                         if tune and eng in ('eigen', 'mkl') \
                                 and 'n_outer_threads' in cls.optional_args:
                             best_t = float('inf')

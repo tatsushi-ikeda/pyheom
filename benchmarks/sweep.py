@@ -91,11 +91,11 @@ def main():
                         help='static template unrolling: on, off, or both (default: on)')
     parser.add_argument('--n-outer-threads', nargs='+', type=int, metavar='N',
                         help='OMP outer-loop thread counts to sweep '
-                             '(default: use environment)')
+                             '(default: 1; specify to enable node-level OMP parallelism)')
     parser.add_argument('--n-inner-threads', nargs='+', type=int, metavar='N',
                         help='inner matrix-op thread counts to sweep; '
                              'sets n_inner_threads (Eigen::setNbThreads / '
-                             'mkl_set_num_threads) (default: 1)')
+                             'mkl_set_num_threads) (default: OMP_NUM_THREADS or cpu_count)')
     parser.add_argument('--n-trials', type=int, default=3,
                         help='timing trials per combination (default: 3)')
     parser.add_argument('--t-final', type=float, default=T_FINAL,

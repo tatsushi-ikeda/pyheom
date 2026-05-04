@@ -21,8 +21,8 @@ class HEOMSolver(QMESolver):
     ]
 
     optional_args = OrderedDict(
-        n_inner_threads = 1,
-        n_outer_threads = lambda: int(environ.get('OMP_NUM_THREADS', cpu_count())),
+        n_inner_threads = lambda: int(environ.get('OMP_NUM_THREADS', cpu_count())),
+        n_outer_threads = 1,
     )
 
     space_char = {
