@@ -6,13 +6,14 @@ import pyheom.pylibheom as _lb
 from pyheom import HEOMSolver, noise_decomposition, Brown
 
 # ---------------------------------------------------------------------------
-# System parameters (dimensionless toy values)
+# System parameters -- match examples/basic/brownian_oscillator_heom.py
 # ---------------------------------------------------------------------------
-LAMBDA_0 = 0.01
+LAMBDA_0 = 0.1
 OMEGA_0  = 1.0
 ZETA     = 0.5
 T        = 1.0
-N_TIERS  = 5
+J_COUP   = 0.1   # off-diagonal coupling in H
+N_TIERS  = 10
 
 # Benchmark run parameters (shorter than the example for fast iteration)
 T_FINAL      = 5.0
@@ -33,12 +34,12 @@ def solve_kwargs(solver):
 
 def _H():
     omega_1 = np.sqrt(OMEGA_0**2 - ZETA**2 * 0.25)
-    return np.array([[omega_1, 0.0], [0.0, 0.0]], dtype=np.complex128)
+    return np.array([[omega_1, J_COUP], [J_COUP, 0.0]], dtype=np.complex128)
 
 
 def _corr():
-    J = Brown(LAMBDA_0, ZETA, OMEGA_0)
-    corr = noise_decomposition(J, T=T, type_ltc='psd', n_psd=1, type_psd='n-1/n')
+    J_sd = Brown(LAMBDA_0, ZETA, OMEGA_0)
+    corr = noise_decomposition(J_sd, T=T, type_ltc='psd', n_psd=1, type_psd='n-1/n')
     corr.V = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
     return corr
 
