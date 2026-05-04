@@ -16,7 +16,7 @@ skip  = "*-musllinux*"
 
 # Jinja2 is required by the libheom CMake template system.
 # ninja speeds up the C++ build inside the container.
-before-build = "rm -rf /project/build"
+before-build = "rm -rf /project/build && find /project/pyheom -name '*.so' -delete"
 
 [tool.cibuildwheel.linux]
 archs = ["x86_64"]
@@ -24,4 +24,9 @@ manylinux-x86_64-image = "quay.io/pypa/manylinux_2_28_x86_64"
 
 # PYHEOM_VARIANT appends a local-version suffix (+eigen, +cuda117, ...) to
 # the wheel name so that Eigen and CUDA wheels can coexist in the same release.
-environment = { PYHEOM_VARIANT = "eigen" }
+# libgomp is excluded from bundling so that the wheel uses the system libgomp.so.1
+# at runtime.  Bundling a second libgomp alongside numpy's copy causes a crash.
+# CXXFLAGS disables AVX-512: the manylinux GCC emits zmm by default on AVX-512 hosts.
+# libgomp excluded to avoid double-loading alongside numpy's libgomp on Colab.
+environment = { PYHEOM_VARIANT = "eigen", CXXFLAGS = "-mno-avx512f -mno-avx512vl -mno-avx512bw -mno-avx512dq -mno-avx512cd" }
+repair-wheel-command = "auditwheel repair --exclude libgomp.so.1 -w {dest_dir} {wheel}"

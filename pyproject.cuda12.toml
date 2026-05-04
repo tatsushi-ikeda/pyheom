@@ -1,0 +1,44 @@
+# cibuildwheel config for CUDA 12.x wheel.
+#
+# Usage (from pyheom/ project root):
+#   module load cuda/12.8
+#   bash scripts/build_wheels.sh --cuda12
+#
+# Requirements:
+#   - /opt/cuda/12.8 must exist on the host (module load cuda/12.8)
+#   - podman must be available
+#
+# The host CUDA toolkit is bind-mounted read-only into the container.
+# The resulting wheel links against libcudart, libcublas, etc. from the
+# target system's CUDA 12.x installation.
+
+[build-system]
+requires = ["setuptools>=42", "wheel", "jinja2", "ninja"]
+build-backend = "setuptools.build_meta"
+
+[tool.cibuildwheel]
+# build_wheels.sh --cuda12 substitutes the actual CUDA 12 path for /opt/cuda/12.x.
+container-engine = { name = "podman", create-args = ["-v", "/opt/cuda/12.x:/usr/local/cuda:ro"] }
+build = "cp39-* cp310-* cp311-* cp312-*"
+skip  = "*-musllinux*"
+
+before-build = "rm -rf /project/build && find /project/pyheom -name '*.so' -delete"
+
+[tool.cibuildwheel.linux]
+archs = ["x86_64"]
+manylinux-x86_64-image = "quay.io/pypa/manylinux2014_x86_64"
+
+# manylinux2014 uses GCC 10.2 (devtoolset-10), compatible with CUDA 12.x (max GCC 12).
+# manylinux_2_28 uses GCC 14 which CUDA 12.x does not support.
+# CUDA_ARCH_LIST adds sm_89 (L4 / RTX 40xx) available from CUDA 11.8+.
+# libcusolver SONAME is .11 in CUDA 12.8 (library version lags toolkit version).
+# libgomp excluded to avoid double-loading alongside numpy's libgomp.
+# CUDA runtime libs excluded; target system's CUDA 12.x installation provides them.
+repair-wheel-command = "auditwheel repair --exclude libgomp.so.1 --exclude libcuda.so.1 --exclude libcudart.so.12 --exclude libcublas.so.12 --exclude libcublasLt.so.12 --exclude libcusparse.so.12 --exclude libcusolver.so.11 --exclude libnvrtc.so.12 -w {dest_dir} {wheel}"
+
+[tool.cibuildwheel.linux.environment]
+PYHEOM_VARIANT  = "cuda12x"
+CMAKE_ARGS      = "-DLIBHEOM_ENABLE_CUDA=ON -DCUDA_ARCH_LIST=70;75;80;86;89"
+CXXFLAGS        = "-mno-avx512f -mno-avx512vl -mno-avx512bw -mno-avx512dq -mno-avx512cd"
+PATH            = "/usr/local/cuda/bin:$PATH"
+LD_LIBRARY_PATH = "/usr/local/cuda/lib64"
