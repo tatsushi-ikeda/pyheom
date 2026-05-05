@@ -1,4 +1,4 @@
-"""Tests for pyheom.predefined_noise: spectral densities at known frequencies.
+"""Tests for pyheom.spectral_density: spectral densities at known frequencies.
 
 Numerical-contract style: pole decompositions and analytic J(omega) values are
 pinned so that future renames only require import-line changes.
@@ -7,7 +7,7 @@ pinned so that future renames only require import-line changes.
 import numpy as np
 import pytest
 
-from pyheom.predefined_noise import (
+from pyheom.spectral_density import (
     SpectralDensity, Drude, Brown, OverdampedBrown, BrownDrude,
 )
 

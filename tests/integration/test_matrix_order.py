@@ -12,12 +12,12 @@ from pyheom import HEOMSolver, noise_decomposition, Brown
 
 pytestmark = pytest.mark.integration
 
-# Reference rho_00 at t~=4.975 from C+C variant (n_tiers=3, lsrk4, dt=2.5e-3)
+# Reference rho_00 at t~=4.975 from C+C variant (truncation_depth=3, lsrk4, dt=2.5e-3)
 REFERENCE_RHO00 = 0.7569752673540563
 TOL = 1e-12
 
 
-def _run_one(h_order, liouville_order, n_tiers=3):
+def _run_one(h_order, liouville_order, truncation_depth=3):
     J = Brown(0.01, 0.5, 1.0)
     corr = noise_decomposition(J, T=1.0, type_ltc='psd', n_psd=1, type_psd='n-1/n')
     omega_1 = np.sqrt(1.0 - 0.5**2 * 0.25)
@@ -30,7 +30,7 @@ def _run_one(h_order, liouville_order, n_tiers=3):
         H, [corr],
         space='liouville', format='dense', engine='eigen',
         liouville_order=liouville_order, solver='lsrk4',
-        n_tiers=n_tiers, n_inner_threads=1, n_outer_threads=1,
+        truncation_depth=truncation_depth, n_inner_threads=1, n_outer_threads=1,
     )
 
     rho_0 = np.zeros((2, 2), dtype=np.complex128, order=h_order)

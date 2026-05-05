@@ -1,4 +1,4 @@
-"""Tests for pyheom.pade_spectral_decomposition: Pade poles reproduce coth(omega/(2T))/2.
+"""Tests for pyheom.pade_decomposition: Pade poles reproduce coth(omega/(2T))/2.
 
 The PSD approximates coth(omega/(2T))/2 (= n(omega)+1/2) as:
     g(omega) = T/omega + R_1*omega + T_3*omega^3
@@ -10,7 +10,7 @@ Accuracy improves monotonically with n_psd.
 import numpy as np
 import pytest
 
-from pyheom.pade_spectral_decomposition import psd
+from pyheom.pade_decomposition import psd
 
 pytestmark = pytest.mark.unit
 

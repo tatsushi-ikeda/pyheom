@@ -24,7 +24,7 @@ omega_0  = 1.0
 zeta     = 0.5
 T        = 1.0
 J        = 0.1
-n_tiers  = 10
+truncation_depth  = 10
 
 # --- Hamiltonian ---
 omega_1 = np.sqrt(omega_0**2 - zeta**2 * 0.25)
@@ -43,7 +43,7 @@ qme = HEOMSolver(
     H, [corr],
     space='Liouville', format='dense', engine='Eigen',
     liouville_order='C', solver='rkdp',
-    n_tiers=n_tiers, n_inner_threads=4, n_outer_threads=1,
+    truncation_depth=truncation_depth, n_inner_threads=4, n_outer_threads=1,
 )
 
 # --- initial state: excited state |0><0| ---
@@ -51,8 +51,8 @@ rho_0 = np.zeros((2, 2), dtype=np.complex128)
 rho_0[0, 0] = 1.0
 
 # --- print solver summary ---
-n_hrchy = qme.init(rho_0, dt=1e-2).rho_hierarchy.shape[0]
-print(f'HEOM  n_level={qme.n_level}  n_tiers={n_tiers}  n_hrchy={n_hrchy}', file=stderr)
+n_hierarchy = qme.init(rho_0, dt=1e-2).rho_hierarchy.shape[0]
+print(f'HEOM  n_level={qme.n_level}  truncation_depth={truncation_depth}  n_hierarchy={n_hierarchy}', file=stderr)
 print(f'      lambda_0={lambda_0}  omega_0={omega_0}  zeta={zeta}  T={T}  J={J}', file=stderr)
 
 # --- time evolution ---
@@ -64,7 +64,7 @@ _fmt = '{:12.6f}  {:14.10f}  {:14.10f}  {:+14.10f}  {:+14.10f}  {:14.10f}'
 
 with open('brownian_oscillator_heom.dat', 'w') as out, tqdm.tqdm(total=t_end) as bar:
     print(f'# lambda_0={lambda_0}  omega_0={omega_0}  zeta={zeta}  T={T}'
-          f'  J={J}  n_tiers={n_tiers}  n_hrchy={n_hrchy}', file=out)
+          f'  J={J}  truncation_depth={truncation_depth}  n_hierarchy={n_hierarchy}', file=out)
     print('# {:>10s}  {:>14s}  {:>14s}  {:>14s}  {:>14s}  {:>14s}'.format(
         't', 'rho_00', 'rho_11', 'Re(rho_01)', 'Im(rho_01)', 'Tr(rho)'), file=out)
     def callback(t):

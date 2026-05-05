@@ -50,7 +50,7 @@ def _run(space, n_outer=1, n_inner=1):
         H, [corr],
         space=space, format='dense', engine='eigen',
         solver='lsrk4',
-        n_tiers=N_TIERS, n_inner_threads=n_inner, n_outer_threads=n_outer,
+        truncation_depth=N_TIERS, n_inner_threads=n_inner, n_outer_threads=n_outer,
     )
     rho_0 = np.zeros((2, 2), dtype=np.complex128)
     rho_0[0, 0] = 1.0
@@ -139,6 +139,6 @@ class TestCudaValidation:
             HEOMSolver(
                 H, [corr],
                 space='liouville', format='dense', engine='cuda',
-                solver='lsrk4', n_tiers=N_TIERS,
+                solver='lsrk4', truncation_depth=N_TIERS,
                 n_outer_threads=2,
             )

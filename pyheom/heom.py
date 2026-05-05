@@ -12,12 +12,12 @@ from multiprocessing import cpu_count
 class HEOMSolver(QMESolver):
     """Hierarchical equations of motion (HEOM) solver.
 
-    n_tiers controls the hierarchy truncation depth.
+    truncation_depth controls the hierarchy truncation depth.
     """
     qme_name = 'heom'
 
     compulsory_args = [
-        'n_tiers',
+        'truncation_depth',
     ]
 
     optional_args = OrderedDict(
@@ -32,4 +32,4 @@ class HEOMSolver(QMESolver):
     }
 
     def storage_size(self):
-        return self.qme_impl.get_n_hrchy() + 1
+        return self.qme_impl.get_n_hierarchy() + 1

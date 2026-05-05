@@ -5,15 +5,36 @@
 #  See LICENSE.txt for licence.
 # ------------------------------------------------------------------------*/
 
-from .predefined_noise    import *
+from .spectral_density    import *
 from .noise_decomposition import *
 from .unit                import *
 from .redfield     import *
 from .heom         import *
 
-# Re-export public types at top level
 from .noise_decomposition import BathCorrelation
 from .solver_base import Result, Integrator
+
+__all__ = [
+    # Solvers
+    'HEOMSolver',
+    'RedfieldSolver',
+    # Bath correlation
+    'noise_decomposition',
+    'BathCorrelation',
+    # Spectral densities
+    'SpectralDensity',
+    'Drude',
+    'Brown',
+    'OverdampedBrown',
+    'BrownDrude',
+    # Return types
+    'Result',
+    'Integrator',
+    # Unit system
+    'unit',
+    # Backend query
+    'is_supported',
+]
 
 def is_supported(engine):
     engine = engine.lower()

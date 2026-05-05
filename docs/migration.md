@@ -14,7 +14,7 @@ solver = pyheom.Redfield(H, noises, ...)
 
 # v1.0
 from pyheom import HEOMSolver, RedfieldSolver
-solver = HEOMSolver(H, noises, n_tiers=5, ...)
+solver = HEOMSolver(H, noises, truncation_depth=5, ...)
 solver = RedfieldSolver(H, noises, ...)
 ```
 
@@ -167,6 +167,34 @@ from pyheom import HEOMSolver, RedfieldSolver
 solver = HEOMSolver(H, [corr], ...)
 solver = RedfieldSolver(H, [corr], ...)
 ```
+
+### Solver parameter rename
+
+```python
+# v1.0.0a2
+solver = HEOMSolver(H, [corr], n_tiers=5, ...)
+
+# v1.0.0b1
+solver = HEOMSolver(H, [corr], truncation_depth=5, ...)
+```
+
+### Module renames
+
+```python
+# v1.0.0a2
+from pyheom.predefined_noise import Drude, Brown
+from pyheom.pade_spectral_decomposition import psd
+
+# v1.0.0b1
+from pyheom.spectral_density import Drude, Brown
+from pyheom.pade_decomposition import psd
+```
+
+Public functions moved or privatized:
+
+- `calc_noise_time_domain` -> `calc_bath_corr_poles`
+- `calc_noise_params` -> `_poles_to_bath_corr` (privatized; use `noise_decomposition` instead)
+- `fsd_coeffs` -> `_FSD_COEFFS` (privatized)
 
 ### New in v1.0.0b1
 

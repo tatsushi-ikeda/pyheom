@@ -63,7 +63,7 @@ def build_solver(engine, space, fmt, solver='lsrk4', unrolling=True, **kwargs):
     """
     try:
         return HEOMSolver(_H(), [_corr()], engine=engine, space=space,
-                          format=fmt, solver=solver, n_tiers=N_TIERS,
+                          format=fmt, solver=solver, truncation_depth=N_TIERS,
                           unrolling=unrolling, **kwargs)
     except AttributeError:
         return None

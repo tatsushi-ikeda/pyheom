@@ -8,7 +8,7 @@
 It provides HEOM (Hierarchical Equations of Motion) and Redfield master equation solvers
 backed by a C++ core (`libheom`) with CPU (Eigen/MKL) and GPU (CUDA) backends.
 
-The current release is v1.0.0a4.
+The current release is v1.0.0b1.
 
 ## Documentation
 

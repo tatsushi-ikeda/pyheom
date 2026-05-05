@@ -1,7 +1,7 @@
 """Integration test: rk4, lsrk4, rkdp solvers agree to within tolerances.
 
 All three solvers applied to the same system (2-level Brownian oscillator,
-n_tiers=3) must agree on populations to within their respective truncation
+truncation_depth=3) must agree on populations to within their respective truncation
 error bounds:
   - rk4 vs lsrk4: same dt, same order -> floating-point agreement (~1e-14)
   - lsrk4 vs rkdp: adaptive step-size control -> agreement at atol/rtol level
@@ -31,7 +31,7 @@ def _build_solver(solver_name):
         H, [corr],
         space='liouville', format='dense', engine='eigen',
         liouville_order='C', solver=solver_name,
-        n_tiers=3, n_inner_threads=1, n_outer_threads=1,
+        truncation_depth=3, n_inner_threads=1, n_outer_threads=1,
     )
 
 

@@ -20,7 +20,7 @@ CALLBACK_DT = 2.5e-2
 TARGET_T    = 4.975
 
 
-def _build_heom(n_tiers=3):
+def _build_heom(truncation_depth=3):
     J = Brown(0.01, 0.5, 1.0)
     corr = noise_decomposition(J, T=1.0, type_ltc='psd', n_psd=1, type_psd='n-1/n')
     omega_1 = np.sqrt(1.0 - 0.5**2 * 0.25)
@@ -30,7 +30,7 @@ def _build_heom(n_tiers=3):
         H, [corr],
         space='liouville', format='dense', engine='eigen',
         liouville_order='C', solver='lsrk4',
-        n_tiers=n_tiers, n_inner_threads=1, n_outer_threads=1,
+        truncation_depth=truncation_depth, n_inner_threads=1, n_outer_threads=1,
     )
 
 
@@ -162,7 +162,7 @@ class TestHierarchyRestart:
         np.testing.assert_allclose(rho_restart, rho_ref, atol=1e-8)
 
     def test_restart_shape_mismatch_raises(self):
-        qme = _build_heom(n_tiers=3)
+        qme = _build_heom(truncation_depth=3)
         bad = np.zeros((999, 2, 2), dtype=np.complex128)
         with pytest.raises(ValueError, match='storage_size'):
             qme.solve(bad, np.array([0.0, 0.1]), dt=0.01)
@@ -230,7 +230,7 @@ class TestIntegrator:
         np.testing.assert_allclose(integrator.rho, rho_ref, atol=1e-8)
 
     def test_integrator_rho_hierarchy_shape(self):
-        qme        = _build_heom(n_tiers=2)
+        qme        = _build_heom(truncation_depth=2)
         integrator = qme.init(_rho0(), dt=1e-3)
         integrator.advance_to(0.5)
         assert integrator.rho_hierarchy.shape == qme.rho_hierarchy.shape
@@ -259,7 +259,7 @@ class TestLazyNOuterThreads:
             H, [corr],
             space='liouville', format='dense', engine='eigen',
             liouville_order='C', solver='lsrk4',
-            n_tiers=2, n_inner_threads=1, n_outer_threads=3,
+            truncation_depth=2, n_inner_threads=1, n_outer_threads=3,
         )
         assert qme.qme_args['n_outer_threads'] == 3
 
@@ -280,6 +280,6 @@ class TestDeviceKwarg:
                 H, [corr],
                 space='liouville', format='dense', engine='eigen',
                 liouville_order='C', solver='lsrk4',
-                n_tiers=2, n_inner_threads=1, n_outer_threads=1,
+                truncation_depth=2, n_inner_threads=1, n_outer_threads=1,
                 device=0,
             )

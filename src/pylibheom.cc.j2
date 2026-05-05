@@ -246,11 +246,11 @@ PYBIND11_MODULE(pylibheom, m)
       m, "heom_{{dtype_symbol}}h{{format_symbol}}{{order_symbol}}{{num_symbol}}_{{engine}}"
   )
       .def(py::init<int, int, int>(),
-           py::arg("max_depth"),
+           py::arg("truncation_depth"),
            py::arg("n_inner_threads") = 0,
            py::arg("n_outer_threads") = 1)
       .def("set_param",   &heom_hilb<{{num}},{{dtype}},libheom::{{format}},{{order}},{{engine}}>::set_param)
-      .def("get_n_hrchy", &heom<{{dtype}},{{order}},{{engine}}>::get_n_hrchy);
+      .def("get_n_hierarchy", &heom<{{dtype}},{{order}},{{engine}}>::get_n_hierarchy);
 
   // heom_liou
   {%           for order_liou, order_liou_symbol in orders %}
@@ -258,11 +258,11 @@ PYBIND11_MODULE(pylibheom, m)
       m, "heom_{{dtype_symbol}}l{{format_symbol}}{{order_symbol}}{{order_liou_symbol}}{{num_symbol}}_{{engine}}"
   )
       .def(py::init<int, int, int>(),
-           py::arg("max_depth"),
+           py::arg("truncation_depth"),
            py::arg("n_inner_threads") = 0,
            py::arg("n_outer_threads") = 1)
       .def("set_param",   &heom_liou<{{num}},{{dtype}},libheom::{{format}},{{order}},{{order_liou}},{{engine}}>::set_param)
-      .def("get_n_hrchy", &heom<{{dtype}},{{order}},{{engine}}>::get_n_hrchy);
+      .def("get_n_hierarchy", &heom<{{dtype}},{{order}},{{engine}}>::get_n_hierarchy);
   {%           endfor %}
 
   // heom_ado
@@ -271,11 +271,11 @@ PYBIND11_MODULE(pylibheom, m)
       m, "heom_{{dtype_symbol}}a{{format_symbol}}{{order_symbol}}{{order_liou_symbol}}{{num_symbol}}_{{engine}}"
   )
       .def(py::init<int, int, int>(),
-           py::arg("max_depth"),
+           py::arg("truncation_depth"),
            py::arg("n_inner_threads") = 0,
            py::arg("n_outer_threads") = 1)
       .def("set_param",   &heom_ado<{{num}},{{dtype}},libheom::{{format}},{{order}},{{order_liou}},{{engine}}>::set_param)
-      .def("get_n_hrchy", &heom<{{dtype}},{{order}},{{engine}}>::get_n_hrchy);
+      .def("get_n_hierarchy", &heom<{{dtype}},{{order}},{{engine}}>::get_n_hierarchy);
   {%           endfor %}
   
   {%         endfor %}

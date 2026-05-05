@@ -7,9 +7,9 @@ derived from the spectral density poles alone.
 import numpy as np
 import pytest
 
-from pyheom.predefined_noise import Drude, Brown
+from pyheom.spectral_density import Drude, Brown
 from pyheom.noise_decomposition import (
-    noise_decomposition, BathCorrelation, calc_noise_time_domain, calc_noise_params,
+    noise_decomposition, BathCorrelation, calc_bath_corr_poles, _poles_to_bath_corr,
 )
 
 pytestmark = pytest.mark.unit
@@ -147,7 +147,7 @@ class TestBrownOverdampedNone:
 
 
 # ---------------------------------------------------------------------------
-# calc_noise_time_domain: type_ltc comparison
+# calc_bath_corr_poles: type_ltc comparison
 # ---------------------------------------------------------------------------
 
 class TestCalcNoiseTimeDomainDrude:
@@ -157,28 +157,28 @@ class TestCalcNoiseTimeDomainDrude:
         self.J = Drude(eta=2.0, gamma_c=3.0)
 
     def test_a_single_key(self):
-        _, A = calc_noise_time_domain(self.J, T=1.0, type_ltc='none')
+        _, A = calc_bath_corr_poles(self.J, T=1.0, type_ltc='none')
         assert list(A.keys()) == [(3.0, 0)]
 
     def test_a_value(self):
-        _, A = calc_noise_time_domain(self.J, T=1.0, type_ltc='none')
+        _, A = calc_bath_corr_poles(self.J, T=1.0, type_ltc='none')
         assert float(A[(3.0, 0)]) == pytest.approx(-9.0, rel=1e-12)
 
     def test_s_single_key(self):
-        S, _ = calc_noise_time_domain(self.J, T=1.0, type_ltc='none')
+        S, _ = calc_bath_corr_poles(self.J, T=1.0, type_ltc='none')
         assert list(S.keys()) == [(3.0, 0)]
 
     def test_s_value(self):
-        S, _ = calc_noise_time_domain(self.J, T=1.0, type_ltc='none')
+        S, _ = calc_bath_corr_poles(self.J, T=1.0, type_ltc='none')
         assert float(S[(3.0, 0)]) == pytest.approx(6.0, rel=1e-12)
 
     def test_s_scales_with_temperature(self):
         # S is proportional to T
-        S1, _ = calc_noise_time_domain(self.J, T=1.0, type_ltc='none')
-        S2, _ = calc_noise_time_domain(self.J, T=2.0, type_ltc='none')
+        S1, _ = calc_bath_corr_poles(self.J, T=1.0, type_ltc='none')
+        S2, _ = calc_bath_corr_poles(self.J, T=2.0, type_ltc='none')
         assert float(S2[(3.0, 0)]) == pytest.approx(2 * float(S1[(3.0, 0)]), rel=1e-12)
 
     def test_a_independent_of_temperature(self):
-        _, A1 = calc_noise_time_domain(self.J, T=1.0, type_ltc='none')
-        _, A2 = calc_noise_time_domain(self.J, T=2.0, type_ltc='none')
+        _, A1 = calc_bath_corr_poles(self.J, T=1.0, type_ltc='none')
+        _, A2 = calc_bath_corr_poles(self.J, T=2.0, type_ltc='none')
         assert float(A1[(3.0, 0)]) == pytest.approx(float(A2[(3.0, 0)]), rel=1e-12)

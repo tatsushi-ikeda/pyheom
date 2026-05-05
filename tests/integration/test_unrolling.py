@@ -62,14 +62,14 @@ class TestConfigSelection:
     def test_heom_static_level_selected_when_unrolling_on(self, n_level):
         H = _make_H(n_level)
         qme = HEOMSolver(H, [_make_corr(n_level)], engine='eigen',
-                         unrolling=True, n_tiers=2)
+                         unrolling=True, truncation_depth=2)
         assert qme.config['c_level'] == str(n_level)
 
     @pytest.mark.parametrize('n_level', STATIC_LEVELS)
     def test_heom_dynamic_level_selected_when_unrolling_off(self, n_level):
         H = _make_H(n_level)
         qme = HEOMSolver(H, [_make_corr(n_level)], engine='eigen',
-                         unrolling=False, n_tiers=2)
+                         unrolling=False, truncation_depth=2)
         assert qme.config['c_level'] == 'n'
 
     @pytest.mark.parametrize('n_level', STATIC_LEVELS)
@@ -83,7 +83,7 @@ class TestConfigSelection:
         H = _make_H(5)
         for unrolling in [True, False]:
             qme = HEOMSolver(H, [_make_corr(5)], engine='eigen',
-                             unrolling=unrolling, n_tiers=1)
+                             unrolling=unrolling, truncation_depth=1)
             assert qme.config['c_level'] == 'n'
 
     @pytest.mark.skipif(not _lb.mkl_is_supported(), reason='MKL not available')
@@ -91,7 +91,7 @@ class TestConfigSelection:
     def test_mkl_always_dynamic(self, n_level):
         H = _make_H(n_level)
         qme = HEOMSolver(H, [_make_corr(n_level)], engine='mkl',
-                         unrolling=True, n_tiers=2)
+                         unrolling=True, truncation_depth=2)
         assert qme.config['c_level'] == 'n'
 
     @pytest.mark.skipif(not _lb.cuda_is_supported(), reason='CUDA not available')
@@ -99,7 +99,7 @@ class TestConfigSelection:
     def test_cuda_always_dynamic(self, n_level):
         H = _make_H(n_level)
         qme = HEOMSolver(H, [_make_corr(n_level)], engine='cuda',
-                         unrolling=True, n_tiers=2)
+                         unrolling=True, truncation_depth=2)
         assert qme.config['c_level'] == 'n'
 
 
@@ -114,8 +114,8 @@ class TestUnrollingEquivalence:
 
     @pytest.mark.parametrize('n_level', STATIC_LEVELS)
     def test_heom_hilbert_dense(self, n_level):
-        r_on  = _run(HEOMSolver, n_level, unrolling=True,  n_tiers=2)
-        r_off = _run(HEOMSolver, n_level, unrolling=False, n_tiers=2)
+        r_on  = _run(HEOMSolver, n_level, unrolling=True,  truncation_depth=2)
+        r_off = _run(HEOMSolver, n_level, unrolling=False, truncation_depth=2)
         np.testing.assert_allclose(r_on.expect, r_off.expect, atol=self.TOL,
                                    err_msg=f'HEOM n={n_level}: unrolling mismatch')
 
@@ -138,7 +138,7 @@ class TestUnrollingEquivalence:
         corr.V = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.complex128)
 
         qme = HEOMSolver(H, [corr], engine='eigen', space='liouville',
-                         format='dense', solver='lsrk4', unrolling=True, n_tiers=5)
+                         format='dense', solver='lsrk4', unrolling=True, truncation_depth=5)
         t_list = np.arange(0.0, 5.0 + 2.5e-2 * 0.5, 2.5e-2)
         captured = {}
 
@@ -160,7 +160,7 @@ class TestUnrollingEquivalence:
         def make(unrolling):
             return HEOMSolver(H, [corr], engine='eigen', space='liouville',
                               format='dense', solver='lsrk4',
-                              unrolling=unrolling, n_tiers=5)
+                              unrolling=unrolling, truncation_depth=5)
 
         qme_on  = make(True)
         qme_off = make(False)

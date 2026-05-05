@@ -6,7 +6,7 @@
 
 ```python
 HEOMSolver(H, noises, *, space='Hilbert', format='dense', engine='Eigen',
-            liouville_order='C', solver='lsrk4', unrolling=True, n_tiers,
+            liouville_order='C', solver='lsrk4', unrolling=True, truncation_depth,
             n_inner_threads=<auto>, n_outer_threads=1,
             units=None, device=None)
 ```
@@ -24,7 +24,7 @@ Hierarchical equations of motion (HEOM) solver.
 - `solver`: time integrator: `'rk4'`, `'lsrk4'` (default), or `'rkdp'`
 - `unrolling`: enable compile-time static template for `n_level` (default: `True`);
   effective only for `engine='Eigen'` with `n_level` in {2, 3, 4}; ignored by MKL and CUDA
-- `n_tiers`: hierarchy truncation depth (required)
+- `truncation_depth`: hierarchy truncation depth (required)
 - `n_inner_threads`: threads for inner matrix operations
   (`Eigen::setNbThreads` / `mkl_set_num_threads`);
   default: `OMP_NUM_THREADS` env var if set, otherwise `cpu_count()`.
@@ -56,7 +56,7 @@ RedfieldSolver(H, noises, *, space='Hilbert', format='dense', engine='Eigen',
 ```
 
 Redfield master equation solver (Born-Markov approximation, no ADO hierarchy).
-Parameters are the same as `HEOMSolver` except `n_tiers` is absent.
+Parameters are the same as `HEOMSolver` except `truncation_depth` is absent.
 
 ---
 
@@ -91,8 +91,8 @@ Return a low-level `Integrator` for step-by-step evolution (see below).
 #### `auto` (classmethod)
 
 ```python
-solver        = HEOMSolver.auto(H, noises, n_tiers=5)
-solver, info  = HEOMSolver.auto(H, noises, n_tiers=5, return_info=True)
+solver        = HEOMSolver.auto(H, noises, truncation_depth=5)
+solver, info  = HEOMSolver.auto(H, noises, truncation_depth=5, return_info=True)
 
 solver        = RedfieldSolver.auto(H, noises)
 ```
@@ -120,7 +120,7 @@ Valid spaces are restricted to those supported by the calling class:
   Eigen/MKL engines to find the fastest thread configuration (default: `False`)
 - `verbose`: print one line per configuration tried (default: `False`)
 - `return_info`: if `True`, return `(solver, info_dict)` instead of just the solver
-- `**kwargs`: forwarded to the constructor (e.g. `n_tiers` for `HEOMSolver`)
+- `**kwargs`: forwarded to the constructor (e.g. `truncation_depth` for `HEOMSolver`)
 
 **Returns**
 
@@ -132,11 +132,11 @@ The best solver instance, or `(instance, info)` when `return_info=True`.
 
 ```python
 # Let pyheom choose the fastest configuration for this machine and system
-qme = HEOMSolver.auto(H, [corr], n_tiers=5)
+qme = HEOMSolver.auto(H, [corr], truncation_depth=5)
 result = qme.solve(rho_0, t_list, dt=0.0025)
 
 # Inspect what was chosen
-qme, info = HEOMSolver.auto(H, [corr], n_tiers=5, return_info=True, verbose=True)
+qme, info = HEOMSolver.auto(H, [corr], truncation_depth=5, return_info=True, verbose=True)
 print(info)  # {'engine': 'mkl', 'space': 'ado', 'format': 'sparse', ...}
 ```
 
@@ -195,15 +195,56 @@ Returns a `BathCorrelation` instance.
 ### `BathCorrelation`
 
 Dataclass holding the decomposed bath correlation function.
-Returned by `noise_decomposition`; must have `.V` set before passing to a solver.
+Can be returned by `noise_decomposition` or constructed directly (see below).
+Must have `.V` set before passing to a solver.
 
-- `gamma`: decay rates, sparse matrix of shape `(K, K)`
-- `sigma`: coupling strengths, ndarray of shape `(K,)`
-- `phi_0`: initial phases, ndarray of shape `(K,)`
-- `s_mat`: real part matrix, sparse `(K, K)`
-- `a_mat`: imaginary part matrix, sparse `(K, K)`
+- `gamma`: decay-rate matrix, sparse `(K, K)`; diagonal entries are the pole positions `gamma_k`
+- `sigma`: coupling vector, ndarray `(K,)`; use `ones(K)` for independent modes
+- `phi_0`: initial-value vector, ndarray `(K,)`; use `ones(K)` for independent modes
+- `s_mat`: symmetric correlation coefficient matrix, sparse `(K, K)`
+- `a_mat`: antisymmetric correlation coefficient matrix, sparse `(K, K)`
 - `s_delta`: Markovian (delta-function) term, scalar; default `0.0`
 - `V`: system-bath coupling operator, shape `(n, n)`; must be set by the user
+
+**Direct construction**
+
+Use this path when the decomposition is already known.  The general formula is:
+
+```
+C(t) = phi_0^T * expm(-gamma * t) * (s_mat - i*a_mat) * sigma  +  s_delta * delta(t)
+```
+
+For K independent exponential modes (gamma and coefficient matrices diagonal,
+phi_0 = sigma = ones(K)), this reduces to:
+
+```
+C(t) = sum_k (s_k - i*a_k) * exp(-gamma_k * t)  +  s_delta * delta(t)
+```
+
+```python
+import numpy as np
+import scipy.sparse
+from pyheom import BathCorrelation
+
+K       = 2
+gamma_k = np.array([1.0+0j, 0.5+1j])  # complex pole positions allowed
+s_k     = np.array([0.5,    0.3   ])   # Re(C) coefficients
+a_k     = np.array([0.2,    0.1   ])   # Im(C) coefficients
+
+corr = BathCorrelation(
+    gamma   = scipy.sparse.diags(gamma_k).tolil(),
+    sigma   = np.ones(K, dtype=complex),
+    phi_0   = np.ones(K, dtype=complex),
+    s_mat   = scipy.sparse.diags(s_k.astype(complex)).tolil(),
+    a_mat   = scipy.sparse.diags(a_k.astype(complex)).tolil(),
+    s_delta = 0.0,
+    V       = V,
+)
+```
+
+For degenerate (higher-order) poles, any valid coupled decomposition of `gamma`,
+`s_mat`, and `a_mat` works.  `noise_decomposition` computes one automatically
+from the spectral density.
 
 ---
 
@@ -246,6 +287,36 @@ BrownDrude(lambda_0, zeta, gamma_c, omega_0)
 
 Combined Brownian-oscillator + Drude spectral density.
 
+### Custom spectral density
+
+Subclass `SpectralDensity` and implement `spectrum` and `get_poles`:
+
+```python
+from pyheom import SpectralDensity, noise_decomposition
+
+class MySpectral(SpectralDensity):
+    def __init__(self, lam, gamma_c):
+        self.lam     = lam
+        self.gamma_c = gamma_c
+        self.poles   = self.get_poles()   # must be set in __init__
+
+    def spectrum(self, omega):
+        return 2*self.lam*self.gamma_c*omega / (omega**2 + self.gamma_c**2)
+
+    def get_poles(self):
+        # Each entry [a, b, m, n] encodes  b * omega^(2n+1) / (a^2 + omega^2)^m.
+        # First-order Lorentzian (m=1, n=0): b * omega / (a^2 + omega^2).
+        return [[self.gamma_c, 2*self.lam*self.gamma_c, 1, 0]]
+
+corr = noise_decomposition(MySpectral(0.1, 0.5), T=1.0, type_ltc='none')
+corr.V = V
+```
+
+**Pole format** for `get_poles()`: a list of `[a, b, m, n]` entries where each entry
+contributes `b * omega^(2n+1) / (a^2 + omega^2)^m` to `J(omega)`.
+Most spectral densities decompose into first-order Lorentzians (`m=1, n=0`).
+Complex `a` is allowed for underdamped oscillators.
+
 ---
 
 ## Unit system
@@ -274,13 +345,12 @@ qme = HEOMSolver(H, [corr], ..., units={'energy': unit.wavenumber,
 These are used internally by `noise_decomposition` and are rarely needed directly.
 
 ```python
-from pyheom.noise_decomposition import calc_noise_time_domain, calc_noise_params
-from pyheom.pade_spectral_decomposition import psd
+from pyheom.noise_decomposition import calc_bath_corr_poles
+from pyheom.pade_decomposition import psd
 from pyheom.summation_over_poles import calc_a_from_poles, calc_s_from_poles
 ```
 
-- `calc_noise_time_domain(J, T, type_ltc, **kwargs)`: compute (S, A) matrices from spectral density
-- `calc_noise_params(S, A)`: convert (S, A) to `BathCorrelation` fields
+- `calc_bath_corr_poles(J, T, type_ltc, **kwargs)`: compute (S, A) pole dicts from spectral density
 - `psd(n, type)`: compute Pade poles and weights for the Bose-Einstein function
-- `calc_a_from_poles(gamma_k, a_k, t)`: evaluate imaginary part of bath correlation at times t
-- `calc_s_from_poles(gamma_k, s_k, t)`: evaluate real part of bath correlation at times t
+- `calc_a_from_poles(poles)`: compute antisymmetric bath correlation poles A(t)
+- `calc_s_from_poles(sd_poles, be_poles)`: compute symmetric bath correlation poles S(t)

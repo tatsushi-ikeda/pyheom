@@ -8,25 +8,23 @@
 import numpy as np
 import scipy as sp
 import scipy.special
-from collections import OrderedDict
+
+
+def _put_coeff(result, a, m, coeff):
+    result[(a, m)] = result.get((a, m), 0) + coeff
+
 
 def calc_a_from_poles(poles):
-    """Compute A(t) = -1/pi integral_0^inf f(omega) sin(omegat) domega analytically from rational poles.
+    """Compute A(t) = -1/pi int_0^inf f(w) sin(wt) dw analytically from rational poles.
 
-    Each pole entry is [a, b, m, n] encoding f(omega) += b omega^(2n+1) / (a^2+omega^2)^m.
-    Returns OrderedDict {(a, l): c} representing A(t) = Sigma c t^l exp(-a t).
+    Each pole entry is [a, b, m, n] encoding f(w) += b w^(2n+1) / (a^2+w^2)^m.
+    Returns dict {(a, l): c} representing A(t) = sum c t^l exp(-a t).
     """
-    result = OrderedDict()
-    
-    def put_coeff(a, m, coeff):
-        if (a, m) in result:
-            result[(a, m)] += coeff
-        else:
-            result[(a, m)] = coeff
-            
+    result = {}
+
     for j in range(len(poles)):
         a, b, m, n = poles[j]
-        
+
         def sub(a, b, m, n):
             for l in range(m):
                 inner1 = 0
@@ -36,38 +34,32 @@ def calc_a_from_poles(poles):
                                *sp.special.poch(2*(n + 1) - p, p)
                                *(0.5)**((2*m - l - p - 1))
                                *(-1)**(p + n + 1))
-                put_coeff(a, l,
-                          (b/sp.special.factorial(m - 1)
-                           *sp.special.binom(m - 1, l)
-                           *a**(2*(n - m + 1) + l)
-                          *inner1))
-                
+                _put_coeff(result, a, l,
+                           (b/sp.special.factorial(m - 1)
+                            *sp.special.binom(m - 1, l)
+                            *a**(2*(n - m + 1) + l)
+                            *inner1))
+
         sub(a, b, m, n)
     return result
 
 
-def calc_s_from_poles(poles_1, poles_2):
-    """Compute S(t) = 2/pi integral_0^inf f(omega) g(omega) cos(omegat) domega analytically from rational poles.
+def calc_s_from_poles(sd_poles, be_poles):
+    """Compute S(t) = 2/pi int_0^inf f(w) g(w) cos(wt) dw analytically from rational poles.
 
-    poles_1 encodes f (spectral density poles); poles_2 encodes g (Bose-Einstein or LTC poles).
-    Returns OrderedDict {(a, l): c}; entries with a=inf represent delta-function contributions.
+    sd_poles encodes f (spectral density poles); be_poles encodes g (Bose-Einstein or LTC poles).
+    Returns dict {(a, l): c}; entries with a=inf represent delta-function contributions.
     """
 
-    result = OrderedDict()
-    
-    def put_coeff(a, m, coeff):
-        if (a, m) in result:
-            result[(a, m)] += coeff
-        else:
-            result[(a, m)] = coeff
+    result = {}
 
-    for a_, b_, m_, n_ in poles_2:
-        for a, b, m, n in poles_1:
+    for a_, b_, m_, n_ in be_poles:
+        for a, b, m, n in sd_poles:
             if (a_ == 0 or a == a_):
                 def sub(a, b, b_, M, N):
                     if (N == M + 1):
-                        put_coeff(np.inf, 2, -b*b_)
-                        put_coeff(np.inf, 0, -b*b_*a**2*M)
+                        _put_coeff(result, np.inf, 2, -b*b_)
+                        _put_coeff(result, np.inf, 0, -b*b_*a**2*M)
                         for l in range(M):
                             inner1 = 0
                             for r in range(M):
@@ -79,13 +71,13 @@ def calc_s_from_poles(poles_1, poles_2):
                                                *(0.5)**(2*M - l - p - 1)
                                                *(-1)**(r - p + 1))
                                 inner1 += (M - r)*sp.special.binom(M + 1, r)*inner2
-                            put_coeff(a, l,
-                                      -sp.special.binom(M - 1, l)
-                                      *2*b*b_/sp.special.factorial(M - 1)
-                                      *a**(l + 3)
-                                      *inner1)
+                            _put_coeff(result, a, l,
+                                       -sp.special.binom(M - 1, l)
+                                       *2*b*b_/sp.special.factorial(M - 1)
+                                       *a**(l + 3)
+                                       *inner1)
                     elif (N == M):
-                        put_coeff(np.inf, 0, b*b_)
+                        _put_coeff(result, np.inf, 0, b*b_)
                         for l in range(M):
                             inner1 = 0
                             for r in range(M):
@@ -97,11 +89,11 @@ def calc_s_from_poles(poles_1, poles_2):
                                                *(0.5)**(2*M - l - p - 1)
                                                *(-1)**(r - p + 1))
                                 inner1 += sp.special.binom(M, r)*inner2
-                            put_coeff(a, l,
-                                      sp.special.binom(M - 1, l)
-                                      *2*b*b_/sp.special.factorial(M - 1)
-                                      *a**(l + 1)
-                                      *inner1)
+                            _put_coeff(result, a, l,
+                                       sp.special.binom(M - 1, l)
+                                       *2*b*b_/sp.special.factorial(M - 1)
+                                       *a**(l + 1)
+                                       *inner1)
                     elif (N < M):
                         for l in range(M):
                             inner1 = 0
@@ -111,11 +103,11 @@ def calc_s_from_poles(poles_1, poles_2):
                                            *sp.special.poch(2*N - p + 1, p)
                                            *(0.5)**(2*M - l - p - 1)
                                            *(-1)**(N - p))
-                            put_coeff(a, l,
-                                      sp.special.binom(M - 1, l)
-                                      *2*b*b_/sp.special.factorial(M - 1)
-                                      *a**(2*(N - M) + l + 1)
-                                      *inner1)
+                            _put_coeff(result, a, l,
+                                       sp.special.binom(M - 1, l)
+                                       *2*b*b_/sp.special.factorial(M - 1)
+                                       *a**(2*(N - M) + l + 1)
+                                       *inner1)
                     else:
                         raise ValueError('An invalid pole is given to calc_s_from_poles')
                 if (a == a_):
@@ -152,11 +144,11 @@ def calc_s_from_poles(poles_1, poles_2):
                                        *sp.special.poch(2*(n + n_ + 1) - p + 1, p)
                                        *(a)**(2*(n + n_ + 1) - p)
                                        *inner2)
-                        put_coeff(a, l,
-                                  2*b*b_
-                                  /sp.special.factorial(m - 1)
-                                  *sp.special.binom(m - 1, l)
-                                  *inner1)
+                        _put_coeff(result, a, l,
+                                   2*b*b_
+                                   /sp.special.factorial(m - 1)
+                                   *sp.special.binom(m - 1, l)
+                                   *inner1)
                 sub(a, b, m, n, a_, b_, m_, n_)
                 sub(a_, b_, m_, n_, a, b, m, n)
     return result

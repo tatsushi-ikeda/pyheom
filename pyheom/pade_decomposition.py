@@ -64,7 +64,7 @@ def psd_n(n, dtype=np.float64):
 
 def psd_nm1(n):
     if (n == 0):
-        raise
+        raise ValueError('n must be >= 1 for N-1/N Pade')
     
     m = 2*n
     b = np.array([2*i + 3 for i in range(m)], dtype=np.float64)
@@ -106,7 +106,7 @@ def psd_nm1(n):
 
 def psd_np1(N):
     if (N == 0):
-        raise
+        raise ValueError('N must be >= 1 for N+1/N Pade')
     
     M = 2*N + 2
     
@@ -161,7 +161,7 @@ def psd_np1(N):
         t[k+1] = T_caron[k]/T_caron[k-1]
     
     # calc eta_caron
-    eta_caron = np.zeros((N+1), dtype=np.complex64)
+    eta_caron = np.zeros((N+1), dtype=np.complex128)
     for j in range(1,N+1):
         delta = np.zeros((N+2), dtype=np.complex128)
         for k in range(1,N+1):

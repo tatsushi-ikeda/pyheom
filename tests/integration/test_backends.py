@@ -1,7 +1,7 @@
 """Integration test: Eigen, MKL, and CUDA backends agree to 1e-8.
 
 Each non-Eigen backend is compared to the Eigen reference for the same
-system (2-level Brownian oscillator, n_tiers=3, lsrk4). Tests are skipped
+system (2-level Brownian oscillator, truncation_depth=3, lsrk4). Tests are skipped
 when the corresponding backend is not available at runtime.
 """
 
@@ -31,7 +31,7 @@ def _run(engine):
         H, [corr],
         space='liouville', format='dense', engine=engine,
         liouville_order='C', solver='lsrk4',
-        n_tiers=3, n_inner_threads=1, n_outer_threads=1,
+        truncation_depth=3, n_inner_threads=1, n_outer_threads=1,
     )
 
     rho_0 = np.zeros((2, 2), dtype=np.complex128)

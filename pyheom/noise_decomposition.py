@@ -9,30 +9,15 @@ import numpy as np
 import scipy as sp
 import scipy.sparse
 import itertools
-from collections import OrderedDict
 from dataclasses import dataclass, field
 
-from .predefined_noise            import *
-from .summation_over_poles        import *
-from .commuting_matrix            import *
-from .pade_spectral_decomposition import *
+from .spectral_density     import *
+from .summation_over_poles import *
+from .commuting_matrix     import *
+from .pade_decomposition   import *
 
 
-@dataclass
-class BathCorrelation:
-    """Bath correlation function decomposed into K exponential modes.
-
-    Returned by :func:`noise_decomposition`.  Set ``V`` before passing to a solver.
-    """
-    gamma:   object         # scipy.sparse (K,K)
-    sigma:   np.ndarray     # (K,)
-    phi_0:   np.ndarray     # (K,)
-    s_mat:   object         # scipy.sparse (K,K)
-    a_mat:   object         # scipy.sparse (K,K)
-    s_delta: complex = 0.0
-    V:       object = None  # set by user
-
-fsd_coeffs = {
+_FSD_COEFFS = {
     100.0:  [[1,  1.35486,   1.34275],
              [2,  5.50923,   0.880362],
              [3,  0.553793, -0.965783]],
@@ -42,6 +27,24 @@ fsd_coeffs = {
              [2,  1.54597,   0.740457],
              [3,  3.39011,   0.626892]],
 }
+
+
+@dataclass
+class BathCorrelation:
+    """Bath correlation function decomposed into K exponential modes.
+
+    Returned by `noise_decomposition`, or constructed directly for a known
+    decomposition C(t) = sum_k (s_k - i*a_k) exp(-gamma_k t) + s_delta*delta(t).
+    Set `V` before passing to a solver.  See `docs/api.md` for construction details.
+    """
+    gamma:   object         # scipy.sparse (K,K)
+    sigma:   np.ndarray     # (K,)
+    phi_0:   np.ndarray     # (K,)
+    s_mat:   object         # scipy.sparse (K,K)
+    a_mat:   object         # scipy.sparse (K,K)
+    s_delta: complex = 0.0
+    V:       object = None  # set by user
+
 
 def calc_s_msd(gamma_k, a_k, T, n_ltc):
     def cot(x):
@@ -75,24 +78,17 @@ def calc_s_msd(gamma_k, a_k, T, n_ltc):
             inner -= 2/(nu_k[k]**2 - gamma_k[m]**2)
         s_delta += -2*T*a_k[m]*inner
     
-    result = OrderedDict()
+    result = {}
 
-    def put_coeff(a, m, coeff):
-        if (a, m) in result:
-            result[(a, m)] += coeff
-        else:
-            result[(a, m)] = coeff
-
-    put_coeff(np.inf, 0, s_delta)
+    result[(np.inf, 0)] = s_delta
     for k in range(n_m):
-        put_coeff(gamma_k[k], 0, s_k[k])
-
+        result[(gamma_k[k], 0)] = result.get((gamma_k[k], 0), 0) + s_k[k]
     for k in range(n_k):
-        put_coeff(nu_k[k], 0, s_k[k + n_m])
+        result[(nu_k[k], 0)] = result.get((nu_k[k], 0), 0) + s_k[k + n_m]
     
     return result
 
-def calc_noise_time_domain(J, T, type_ltc, **kwargs):
+def calc_bath_corr_poles(J, T, type_ltc, **kwargs):
     """Return (S, A) pole dicts for the symmetric/antisymmetric bath correlation functions.
 
     type_ltc: 'none' (no LTC), 'msd' (Matsubara), 'psd' (Pade), or 'psd+fsd'.
@@ -132,7 +128,7 @@ def calc_noise_time_domain(J, T, type_ltc, **kwargs):
                 T_np1 = T_n*chi_fsd
                 coeff_0 += T_n - T_np1
                 T_n   = T_np1
-                for j, a, b in fsd_coeffs[chi_fsd]:
+                for j, a, b in _FSD_COEFFS[chi_fsd]:
                     coeffs.append([j, a, b, T_n])
             T_0 = T_n
         else:
@@ -144,7 +140,7 @@ def calc_noise_time_domain(J, T, type_ltc, **kwargs):
         xi, eta, R_1, T_3 = psd(n_psd, type_psd)
         
         # collect poles
-        poles = OrderedDict()
+        poles = {}
         ## psd poles
         poles[(0, 1, 0)] = T_0
         if (R_1 != 0):
@@ -166,11 +162,11 @@ def calc_noise_time_domain(J, T, type_ltc, **kwargs):
         raise Exception('[Error] Unknown ltc')
 
 
-def calc_noise_params(S, A):
+def _poles_to_bath_corr(S, A):
     """Convert (S, A) pole dicts to a BathCorrelation via the commuting-matrix construction."""
 
     # Calculate Basis Degeneracy
-    phi_deg_dict = OrderedDict()
+    phi_deg_dict = {}
     for gamma, n in itertools.chain(S.keys(), A.keys()):
         if (gamma == np.inf):
             continue
@@ -191,28 +187,28 @@ def calc_noise_params(S, A):
     s_mat = sp.sparse.lil_matrix((phi_dim, phi_dim), dtype=np.complex128)
     a_mat = sp.sparse.lil_matrix((phi_dim, phi_dim), dtype=np.complex128)
     
-    ctr   = 0
+    idx   = 0
     for gamma_n, deg_max in phi_deg_dict.items():
         for deg in range(deg_max):
             phi.append((gamma_n, deg))
-            phi_0[ctr] = 1 if deg == 0 else 0
-            gamma[ctr,ctr] = gamma_n
+            phi_0[idx] = 1 if deg == 0 else 0
+            gamma[idx,idx] = gamma_n
             if deg > 0:
-                gamma[ctr,ctr-1] = -deg
+                gamma[idx,idx-1] = -deg
             if ((gamma_n, deg) in S):
-                s_vec[ctr] = S[(gamma_n, deg)]
+                s_vec[idx] = S[(gamma_n, deg)]
             if ((gamma_n, deg) in A):
-                a_vec[ctr] = A[(gamma_n, deg)]
-            ctr += 1
+                a_vec[idx] = A[(gamma_n, deg)]
+            idx += 1
         block_size = deg+1
-        s_mat[ctr-block_size:ctr, ctr-block_size:ctr] \
-            = get_commuting_matrix(s_vec[ctr-block_size:ctr],
-                                   gamma[ctr-block_size:ctr, ctr-block_size:ctr].todense(),
-                                   sigma[ctr-block_size:ctr])
-        a_mat[ctr-block_size:ctr, ctr-block_size:ctr] \
-            = get_commuting_matrix(a_vec[ctr-block_size:ctr],
-                                   gamma[ctr-block_size:ctr, ctr-block_size:ctr].todense(),
-                                   sigma[ctr-block_size:ctr])
+        s_mat[idx-block_size:idx, idx-block_size:idx] \
+            = get_commuting_matrix(s_vec[idx-block_size:idx],
+                                   gamma[idx-block_size:idx, idx-block_size:idx].todense(),
+                                   sigma[idx-block_size:idx])
+        a_mat[idx-block_size:idx, idx-block_size:idx] \
+            = get_commuting_matrix(a_vec[idx-block_size:idx],
+                                   gamma[idx-block_size:idx, idx-block_size:idx].todense(),
+                                   sigma[idx-block_size:idx])
     s_delta = 0.0
     if (np.inf, 0) in S:
         s_delta = S[(np.inf, 0)]
@@ -261,4 +257,4 @@ def noise_decomposition(J, T, type_ltc, **kwargs):
     >>> corr = noise_decomposition(J, T, 'psd+fsd', n_psd=1, type_psd='N/N',
     ...                            n_fsd_rec=1, chi_fsd=100.0)
     """
-    return calc_noise_params(*calc_noise_time_domain(J, T, type_ltc, **kwargs))
+    return _poles_to_bath_corr(*calc_bath_corr_poles(J, T, type_ltc, **kwargs))

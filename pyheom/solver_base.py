@@ -448,7 +448,7 @@ class QMESolver(ABC):
             If True, return (solver, info_dict) instead of just solver.
         **kwargs
             Extra arguments forwarded to the constructor
-            (e.g. n_tiers for HEOMSolver, solver= to fix the ODE solver).
+            (e.g. truncation_depth for HEOMSolver, solver= to fix the ODE solver).
         """
         import pyheom.pylibheom as _lb
         from ._auto import (_gpu_free_bytes, _thread_candidates,

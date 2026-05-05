@@ -30,7 +30,7 @@ def _build_solver():
     omega_0  = 1.0
     zeta     = 0.5
     T        = 1.0
-    n_tiers  = 5
+    truncation_depth  = 5
 
     J = Brown(lambda_0, zeta, omega_0)
     corr = noise_decomposition(J, T=T, type_ltc='psd', n_psd=1, type_psd='n-1/n')
@@ -44,7 +44,7 @@ def _build_solver():
         space='liouville', format='dense', engine='eigen',
         liouville_order='C', solver='lsrk4',
         engine_args=dict(),
-        n_tiers=n_tiers,
+        truncation_depth=truncation_depth,
         n_inner_threads=1,
         n_outer_threads=1,
     )
