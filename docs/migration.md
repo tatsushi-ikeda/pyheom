@@ -18,23 +18,39 @@ solver = HEOMSolver(H, noises, n_tiers=5, ...)
 solver = RedfieldSolver(H, noises, ...)
 ```
 
+### Spectral density class names
+
+```python
+# v0.5
+J = pyheom.Brownian(lambda_0, zeta, omega_0)
+J = pyheom.BrownianDrivenByDrudian(...)
+J = pyheom.Drudian(...)
+
+# v1.0
+from pyheom import Brown, BrownDrude, Drude
+J = Brown(lambda_0, zeta, omega_0)
+J = BrownDrude(...)
+J = Drude(...)
+```
+
 ### Noise format
 
 ```python
-# v0.5  (nested dict)
-noise = {"V": V, "C": {"gamma": ..., "s": ..., "a": ..., "S_delta": ...}}
+# v0.5  (nested dict; noise_decomposition args use uppercase)
+corr = pyheom.noise_decomposition(J, T=1, type_LTC='PSD', n_PSD=1, type_PSD='N-1/N')
+noise = {"V": V, "C": corr}   # C contains: gamma, sigma, phi_0, s, a, S_delta
 
-# v1.0  (BathCorrelation dataclass)
+# v1.0  (BathCorrelation dataclass; args use lowercase)
 from pyheom import noise_decomposition, Brown
 corr = noise_decomposition(Brown(...), T=T, type_ltc='psd', n_psd=1, type_psd='n-1/n')
 corr.V = V
 solver = HEOMSolver(H, [corr], ...)
 ```
 
-Key renames from intermediate dict format:
+Key renames from v0.5 `C` dict to `BathCorrelation` attributes:
 
-- `s` (1-D) -> `s_mat` (full sparse matrix)
-- `a` (1-D) -> `a_mat` (full sparse matrix)
+- `s` -> `s_mat`
+- `a` -> `a_mat`
 - `S_delta` -> `s_delta`
 
 ### Time evolution interface
@@ -91,7 +107,7 @@ solver = HEOMSolver(..., engine='CUDA', device=0, format='dense', space='Hilbert
 
 ---
 
-## v1.0.0a2 -> v1.0.0a4
+## v1.0.0a2 -> v1.0.0b1
 
 These changes apply to users of the intermediate master-branch releases.
 
@@ -108,7 +124,7 @@ import pyheom
 pyheom.units['energy'] = pyheom.unit.wavenumber
 pyheom.units['time']   = pyheom.unit.femtosecond
 
-# v1.0.0a4
+# v1.0.0b1
 solver = HEOMSolver(H, [corr], ..., units={'energy': unit.wavenumber,
                                            'time':   unit.femtosecond})
 ```
@@ -120,7 +136,7 @@ solver = HEOMSolver(H, [corr], ..., units={'energy': unit.wavenumber,
 corr = noise_decomposition(J, T=T, type_ltc='none')
 solver = HEOMSolver(H, [dict(V=V, **corr)], ...)
 
-# v1.0.0a4  (returns BathCorrelation dataclass)
+# v1.0.0b1  (returns BathCorrelation dataclass)
 corr   = noise_decomposition(J, T=T, type_ltc='none')
 corr.V = V
 solver = HEOMSolver(H, [corr], ...)
@@ -134,7 +150,7 @@ Dict-style access (`corr['gamma']`) is no longer supported; use `corr.gamma`.
 # v1.0.0a2
 from pyheom import drude, brown, overdamped_brown, brown_drude
 
-# v1.0.0a4
+# v1.0.0b1
 from pyheom import Drude, Brown, OverdampedBrown, BrownDrude
 ```
 
@@ -146,13 +162,13 @@ from pyheom import heom_solver, redfield_solver
 solver = heom_solver(H, [corr], ...)
 solver = redfield_solver(H, [corr], ...)
 
-# v1.0.0a4
+# v1.0.0b1
 from pyheom import HEOMSolver, RedfieldSolver
 solver = HEOMSolver(H, [corr], ...)
 solver = RedfieldSolver(H, [corr], ...)
 ```
 
-### New in v1.0.0a4
+### New in v1.0.0b1
 
 - `solve()` returns `Result(times, expect)`.
 - `e_ops=[O_1, ...]` collects expectation values at each output time.
