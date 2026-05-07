@@ -10,6 +10,9 @@
 #   cuda            Eigen + CUDA
 #   all             Eigen + MKL + CUDA
 #
+# Machine-specific settings (MKL path, CUDA arch, etc.) are read from
+# scripts/local.env if it exists.  See scripts/local.env.template.
+#
 # After a successful build the source-tree .so is updated in-place so that
 # the editable install ("pip install -e .") picks it up immediately.
 
@@ -20,14 +23,24 @@ PROFILE="${1:-eigen}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VENV_PYTHON="$ROOT_DIR/../.venv/bin/python"
-BUILD_LIB="$ROOT_DIR/build/lib.linux-x86_64-3.9/pyheom"
-BUILD_TEMP="$ROOT_DIR/build/temp.linux-x86_64-3.9"
+
+# ---------------------------------------------------------------------------
+# Load machine-specific settings (gitignored)
+# ---------------------------------------------------------------------------
+if [ -f "$SCRIPT_DIR/local.env" ]; then
+    source "$SCRIPT_DIR/local.env"
+fi
+
+# ---------------------------------------------------------------------------
+# Derive build directories from the active Python interpreter
+# ---------------------------------------------------------------------------
+_py_ver=$("$VENV_PYTHON" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+_platform=$("$VENV_PYTHON" -c 'import sysconfig; print(sysconfig.get_platform())')
+BUILD_LIB="$ROOT_DIR/build/lib.${_platform}-${_py_ver}/pyheom"
+BUILD_TEMP="$ROOT_DIR/build/temp.${_platform}-${_py_ver}"
 SO_DEST="$ROOT_DIR/pyheom"
 
-MKL_INCLUDE="${MKLROOT}/include"
-MKL_LIBDIR="${MKLROOT}/lib/intel64"
-MKL_RT="$MKL_LIBDIR/libmkl_rt.so"
-CUDA_ARCH_LIST="70"
+CUDA_ARCH_LIST="${CUDA_ARCH_LIST:-70}"
 
 # ---------------------------------------------------------------------------
 # Module initialisation (non-interactive shells don't source .bashrc)
@@ -49,6 +62,14 @@ case "$PROFILE" in
         ;;
     mkl)
         echo ">>> Backend profile: Eigen + MKL"
+        if [ -z "${MKLROOT:-}" ]; then
+            echo "ERROR: MKLROOT is not set." >&2
+            echo "  Run 'module load intel/...' or set MKLROOT in scripts/local.env" >&2
+            exit 1
+        fi
+        MKL_INCLUDE="$MKLROOT/include"
+        MKL_LIBDIR="$MKLROOT/lib/intel64"
+        MKL_RT="$MKL_LIBDIR/libmkl_rt.so"
         if [ ! -f "$MKL_INCLUDE/mkl.h" ]; then
             echo "ERROR: MKL headers not found at $MKL_INCLUDE" >&2
             exit 1
@@ -66,7 +87,7 @@ case "$PROFILE" in
         echo ">>> Backend profile: Eigen + CUDA"
         module load cuda 2>/dev/null || true
         if ! command -v nvcc &>/dev/null; then
-            echo "ERROR: nvcc not found; load the cuda module first" >&2
+            echo "ERROR: nvcc not found; load the CUDA module first" >&2
             exit 1
         fi
         USE_CUDA=ON
@@ -74,6 +95,14 @@ case "$PROFILE" in
         ;;
     all)
         echo ">>> Backend profile: Eigen + MKL + CUDA"
+        if [ -z "${MKLROOT:-}" ]; then
+            echo "ERROR: MKLROOT is not set." >&2
+            echo "  Run 'module load intel/...' or set MKLROOT in scripts/local.env" >&2
+            exit 1
+        fi
+        MKL_INCLUDE="$MKLROOT/include"
+        MKL_LIBDIR="$MKLROOT/lib/intel64"
+        MKL_RT="$MKL_LIBDIR/libmkl_rt.so"
         if [ ! -f "$MKL_INCLUDE/mkl.h" ]; then
             echo "ERROR: MKL headers not found at $MKL_INCLUDE" >&2
             exit 1
@@ -84,7 +113,7 @@ case "$PROFILE" in
         fi
         module load cuda 2>/dev/null || true
         if ! command -v nvcc &>/dev/null; then
-            echo "ERROR: nvcc not found; load the cuda module first" >&2
+            echo "ERROR: nvcc not found; load the CUDA module first" >&2
             exit 1
         fi
         export CPATH="$MKL_INCLUDE:${CPATH:-}"
@@ -113,7 +142,7 @@ echo ">>> Building pylibheom (profile=$PROFILE) ..."
 CMAKE_ARGS="-DLIBHEOM_ENABLE_EIGEN=ON -DLIBHEOM_ENABLE_MKL=$USE_MKL -DLIBHEOM_ENABLE_CUDA=$USE_CUDA $EXTRA_CMAKE_ARGS" \
 CMAKE_BUILD_PARALLEL_LEVEL=$(nproc) \
     "$VENV_PYTHON" setup.py build_ext 2>&1
-# ^^^ build_ext without --inplace puts .so into build/lib.linux-x86_64-3.9/pyheom/
+# ^^^ build_ext without --inplace puts .so into build/lib.<platform>/pyheom/
 
 # ---------------------------------------------------------------------------
 # Install .so into source tree (editable install reads from here)

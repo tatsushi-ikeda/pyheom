@@ -24,3 +24,4 @@ test/*
 gmon.out
 __pycache__/
 docs/_build/
+scripts/local.env

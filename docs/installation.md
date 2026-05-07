@@ -21,7 +21,10 @@ cd pyheom
 git submodule update --init --recursive
 ```
 
-## Environment setup (HPC cluster)
+## Environment setup (HPC cluster example)
+
+The exact module names depend on your cluster.  The example below is for a
+cluster that provides Intel oneAPI and CUDA via the `module` command:
 
 ```bash
 module load intel-python3/... intel/... cuda/...   # adjust to your HPC environment
@@ -29,6 +32,9 @@ python -m venv .venv
 source .venv/bin/activate
 pip install numpy scipy
 ```
+
+On systems without a module system, install the Intel oneAPI toolkit and CUDA
+toolkit separately and ensure the compilers are on `PATH`.
 
 ## Building from source
 
@@ -40,11 +46,14 @@ pip install -e .
 
 ### MKL backend
 
+Set `MKLROOT` to the MKL installation directory (loading the Intel oneAPI
+module typically exports this automatically), then build:
+
 ```bash
-CPATH=${MKLROOT}/include:$CPATH \
-LD_LIBRARY_PATH=${MKLROOT}/lib/intel64:$LD_LIBRARY_PATH \
+CPATH=$MKLROOT/include:$CPATH \
+LD_LIBRARY_PATH=$MKLROOT/lib/intel64:$LD_LIBRARY_PATH \
 CMAKE_ARGS="-DLIBHEOM_USE_MKL=ON \
-            -DBLAS_LIBRARIES=${MKLROOT}/lib/intel64/libmkl_rt.so" \
+            -DBLAS_LIBRARIES=$MKLROOT/lib/intel64/libmkl_rt.so" \
 pip install -e .
 ```
 

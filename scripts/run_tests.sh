@@ -8,6 +8,9 @@
 # for that profile before tests are run.  Any remaining arguments are passed
 # directly to pytest.
 #
+# Machine-specific settings (VENV_LIBDIR, etc.) are read from
+# scripts/local.env if it exists.  See scripts/local.env.template.
+#
 # Examples:
 #   scripts/run_tests.sh                    # test current build, no rebuild
 #   scripts/run_tests.sh cuda               # rebuild for CUDA, then test
@@ -18,6 +21,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VENV_PYTHON="$ROOT_DIR/../.venv/bin/python"
+
+# ---------------------------------------------------------------------------
+# Load machine-specific settings (gitignored)
+# ---------------------------------------------------------------------------
+if [ -f "$SCRIPT_DIR/local.env" ]; then
+    source "$SCRIPT_DIR/local.env"
+fi
 
 # ---------------------------------------------------------------------------
 # Detect if first argument is a backend profile
@@ -59,9 +69,13 @@ echo ""
 echo "=========================================="
 echo " C++ tests (ctest)"
 echo "=========================================="
-BUILD_TEMP="$ROOT_DIR/build/temp.linux-x86_64-3.9"
+_py_ver=$("$VENV_PYTHON" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+_platform=$("$VENV_PYTHON" -c 'import sysconfig; print(sysconfig.get_platform())')
+BUILD_TEMP="$ROOT_DIR/build/temp.${_platform}-${_py_ver}"
 if [ -f "$BUILD_TEMP/CTestTestfile.cmake" ]; then
-    LD_LIBRARY_PATH="${VIRTUAL_ENV}/lib:${LD_LIBRARY_PATH:-}" \
+    # Prepend VENV_LIBDIR to LD_LIBRARY_PATH if set (needed when GTest's
+    # libstdc++ is newer than the system compiler's).
+    LD_LIBRARY_PATH="${VENV_LIBDIR:+${VENV_LIBDIR}:}${LD_LIBRARY_PATH:-}" \
         ctest --test-dir "$BUILD_TEMP" --output-on-failure
 else
     echo "  (no CTestTestfile.cmake found -- C++ tests not built or not enabled)"

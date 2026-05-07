@@ -8,8 +8,11 @@
 # Detection logic:
 #   eigen  -- always tested
 #   mkl    -- tested if ${MKLROOT}/include/mkl.h exists
-#   cuda   -- tested if nvcc is in PATH after loading cuda/11.7
+#   cuda   -- tested if nvcc is in PATH
 #   all    -- tested if both mkl and cuda are detected
+#
+# Machine-specific settings (MKLROOT, etc.) are read from
+# scripts/local.env if it exists.  See scripts/local.env.template.
 #
 # The original .so is restored after all profiles are tested.
 # A summary table is printed at the end.
@@ -21,7 +24,12 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VENV_PYTHON="$ROOT_DIR/../.venv/bin/python"
 SO_PATH="$ROOT_DIR/pyheom/$(ls "$ROOT_DIR/pyheom/pylibheom"*.so 2>/dev/null | head -1 | xargs basename 2>/dev/null || echo 'pylibheom.so')"
 
-MKL_HEADER="${MKLROOT}/include/mkl.h"
+# ---------------------------------------------------------------------------
+# Load machine-specific settings (gitignored)
+# ---------------------------------------------------------------------------
+if [ -f "$SCRIPT_DIR/local.env" ]; then
+    source "$SCRIPT_DIR/local.env"
+fi
 
 # ---------------------------------------------------------------------------
 # Module init
@@ -36,11 +44,11 @@ fi
 HAS_MKL=false
 HAS_CUDA=false
 
-if [ -f "$MKL_HEADER" ]; then
+MKL_HEADER="${MKLROOT:-}/include/mkl.h"
+if [ -n "${MKLROOT:-}" ] && [ -f "$MKL_HEADER" ]; then
     HAS_MKL=true
 fi
 
-module load cuda 2>/dev/null || true
 if command -v nvcc &>/dev/null; then
     HAS_CUDA=true
 fi
