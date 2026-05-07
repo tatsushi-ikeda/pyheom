@@ -69,7 +69,7 @@ See also [Disclaimer](docs/disclaimer.md) for notes on documentation.
 ## Acknowledgments
 
 <p align="center">
-    <a href="https://www.jsps.go.jp/"><img src="https://www.jsps.go.jp/j-grantsinaid/06_jsps_info/g_120612/data/whiteKAKENHIlogoM_jp.jpg" alt="KAKENHI" height=48 hspace=8></a>
+    <a href="https://www.jsps.go.jp/"><img src="https://www.jsps.go.jp/j-grantsinaid/img/logo/KAKENHIlogo_M.jpg" alt="KAKENHI" height=48 hspace=8></a>
     <a href="https://www.moore.org/"><img src="https://www.moore.org/docs/default-source/Grantee-Resources/foundation-logos/moore-logo-color.jpg?sfvrsn=2" alt="MOORE" height=48 hspace=8></a>
 </p>
 
