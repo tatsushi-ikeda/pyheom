@@ -1,16 +1,18 @@
 # cibuildwheel config for CUDA 11.7 wheel.
 #
 # Usage (from pyheom/ project root):
-#   module load cuda/11.7
+#   module load cuda/11.7   # sets CUDA_HOME
 #   bash scripts/build_wheels.sh --cuda
 #
 # Requirements:
-#   - /opt/cuda/11.x must exist on the host (module load cuda/11.7)
+#   - CUDA_HOME must point to the CUDA 11.7 installation directory
 #   - podman must be available
 #
-# The host CUDA toolkit is bind-mounted read-only into the container.
-# The resulting wheel links against libcudart, libcublas, etc. from the
-# target system's CUDA installation (11.7+).
+# build_wheels.sh substitutes the actual CUDA_HOME path into this file
+# before passing it to cibuildwheel (the /opt/cuda/11.x below is a
+# placeholder).  The host CUDA toolkit is bind-mounted read-only into
+# the container.  The resulting wheel links against libcudart, libcublas,
+# etc. from the target system's CUDA installation (11.7+).
 
 [build-system]
 requires = ["setuptools>=42", "wheel", "jinja2", "ninja"]

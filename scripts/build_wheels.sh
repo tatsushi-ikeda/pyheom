@@ -41,16 +41,25 @@ if ${BUILD_EIGEN}; then
 fi
 
 if ${BUILD_CUDA}; then
-    if [ ! -d /opt/cuda/11.x ]; then
-        echo "ERROR: /opt/cuda/11.x not found. Run: module load cuda/11.7" >&2
+    CUDA11_DIR="${CUDA_HOME:-}"
+    if [ -z "${CUDA11_DIR}" ] || [ ! -d "${CUDA11_DIR}" ]; then
+        CUDA11_DIR="$(ls -d /opt/cuda/11.* 2>/dev/null | sort -V | tail -1)"
+    fi
+    if [ -z "${CUDA11_DIR}" ] || [ ! -d "${CUDA11_DIR}" ]; then
+        echo "ERROR: no CUDA 11 installation found." >&2
+        echo "  Run: module load cuda/11.x  or set CUDA_HOME=/path/to/cuda11" >&2
         exit 1
     fi
-    echo "=== Building CUDA 11.7 wheels ==="
+    echo "=== Building CUDA 11.7 wheels using ${CUDA11_DIR} ==="
+    CUDA11_TOML="${PROJECT_DIR}/pyproject.cuda.toml"
+    TMP_CUDA11_TOML="$(mktemp /tmp/pyproject.cuda11.XXXXXX.toml)"
+    sed "s|/opt/cuda/11.x|${CUDA11_DIR}|g" "${CUDA11_TOML}" > "${TMP_CUDA11_TOML}"
     "${CIBW}" \
         --platform linux \
-        --config-file "${PROJECT_DIR}/pyproject.cuda.toml" \
+        --config-file "${TMP_CUDA11_TOML}" \
         --output-dir "${OUT}" \
         "${PROJECT_DIR}"
+    rm -f "${TMP_CUDA11_TOML}"
     echo "=== CUDA 11.7 wheels written to ${OUT} ==="
 fi
 
