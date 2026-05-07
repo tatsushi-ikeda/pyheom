@@ -106,11 +106,11 @@ void set_noise_py(qme_base<dtype,order,linalg_engine>& obj,
   obj.sigma[u].resize(obj.len_gamma[u]);
   std::copy_n(sigma.data(), sigma.shape(0), obj.sigma[u].data());
   
-  S_py.dump(obj.S[u]);
-  
+  S_py.dump(obj.s_mat[u]);
+
   obj.s_delta[u] = s_delta;
-  
-  A_py.dump(obj.A[u]);
+
+  A_py.dump(obj.a_mat[u]);
 }
 
 
