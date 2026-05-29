@@ -3,10 +3,11 @@
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
 #  See LICENSE.txt for licence.
-# ------------------------------------------------------------------------*/
+# ------------------------------------------------------------------------
 
 import numpy as np
 import cmath as cm
+
 
 def psd(n, type_pade):
     """Pade spectral decomposition of the Bose-Einstein distribution into n pole pairs.
@@ -21,24 +22,25 @@ def psd(n, type_pade):
     elif (type_pade == 'n+1/n'):
         return psd_np1(n)
     else:
-        raise Exception('[Error] Undefined type_pade: {}'.format(type_pade))
+        raise ValueError('Undefined type_pade: {}'.format(type_pade))
+
 
 def psd_n(n, dtype=np.float64):
     if n == 0:
         return np.zeros(0), np.zeros(0), 1/12.0, 0.0
-    
+
     m = 2*n + 1
     b = np.array([2*i + 3 for i in range(m)], dtype=np.float64)
-    
+
     Lambda = np.zeros((m, m), dtype=np.float64)
     for i in range(m - 1):
         Lambda[i,i+1] = 1.0/np.sqrt(b[i]*b[i+1])
         Lambda[i+1,i] = Lambda[i,i+1]
-    
+
     lambda_eig, _ = np.linalg.eigh(Lambda)
     lambda_eig.sort()
     xi = np.array([-2.0/l for l in lambda_eig[0:n]])
-    
+
     Lambda_ = np.zeros((m-1, m-1), dtype=np.float64)
     for i in range(m - 2):
         Lambda_[i,i+1] = 1.0/np.sqrt(b[i+1]*b[i+2])
@@ -59,25 +61,26 @@ def psd_n(n, dtype=np.float64):
                 eta[i] /= xi[k]**2 - xi[i]**2
 
     T = 0
-    
+
     return xi, eta, R, T
+
 
 def psd_nm1(n):
     if (n == 0):
         raise ValueError('n must be >= 1 for N-1/N Pade')
-    
+
     m = 2*n
     b = np.array([2*i + 3 for i in range(m)], dtype=np.float64)
-    
+
     Lambda = np.zeros((m, m), dtype=np.float64)
     for i in range(m - 1):
         Lambda[i,i+1] = 1.0/np.sqrt(b[i]*b[i+1])
         Lambda[i+1,i] = Lambda[i,i+1]
-    
+
     lambda_eig, _ = np.linalg.eigh(Lambda)
     lambda_eig.sort()
     xi_ = np.array([-2.0/l for l in lambda_eig[0:n]])
-    
+
     Lambda_ = np.zeros((m-1, m-1), dtype=np.float64)
     for i in range(m - 2):
         Lambda_[i,i+1] = 1.0/np.sqrt(b[i+1]*b[i+2])
@@ -89,7 +92,7 @@ def psd_nm1(n):
         zeta_ = np.array([-2.0/l for l in lambda_eig_[0:n]])
 
     R_ = 0.0
-    
+
     eta_ = np.empty(n)
     for i in range(n):
         eta_[i] = n*b[n]/2.0;
@@ -107,9 +110,9 @@ def psd_nm1(n):
 def psd_np1(N):
     if (N == 0):
         raise ValueError('N must be >= 1 for N+1/N Pade')
-    
+
     M = 2*N + 2
-    
+
     # calc b[m]
     b = np.array([2*m + 3 for m in range(M)], dtype=np.float64)
 
@@ -159,7 +162,7 @@ def psd_np1(N):
     t[1] = T_caron[0]
     for k in range(1,N+1):
         t[k+1] = T_caron[k]/T_caron[k-1]
-    
+
     # calc eta_caron
     eta_caron = np.zeros((N+1), dtype=np.complex128)
     for j in range(1,N+1):

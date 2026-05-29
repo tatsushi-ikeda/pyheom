@@ -3,7 +3,7 @@
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
 #  See LICENSE.txt for licence.
-# ------------------------------------------------------------------------*/
+# ------------------------------------------------------------------------
 
 import enum
 
@@ -24,6 +24,7 @@ UNIT_TIME_VALUE__S = {
     unit.femtosecond: 1.0e-15,
     unit.picosecond:  1.0e-12,
 }
+
 
 def calc_unit_from_dict(d):
     """Compute the unit conversion factor from a `{'energy': ..., 'time': ...}` dict."""

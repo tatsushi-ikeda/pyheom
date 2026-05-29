@@ -3,7 +3,7 @@
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
 #  See LICENSE.txt for licence.
-# ------------------------------------------------------------------------*/
+# ------------------------------------------------------------------------
 
 import numpy as np
 import scipy as sp
@@ -49,20 +49,20 @@ class BathCorrelation:
 def calc_s_msd(gamma_k, a_k, T, n_ltc):
     def cot(x):
         return 1/np.tan(x)
-    
+
     n_m = a_k.shape[0]
     n_k = n_ltc
-    
+
     nu_k    = np.zeros(n_k)
     s_k     = np.zeros(n_m + n_k, dtype=a_k.dtype)
     s_delta = 0.0
-    
+
     for k in range(n_k):
         nu_k[k] = 2*np.pi*(k + 1)*T
         if np.any(np.abs(gamma_k - nu_k[k]) < (np.finfo(float).eps)):
-            raise Exception('[Error] Bath frequency #{} is degenerated.'.format(k))
+            raise ValueError('Bath frequency #{} is degenerated.'.format(k))
 
-    # r_k[m] --> 
+    # r_k[m] -->
     for m in range(n_m):
         s_k[m] = -2*a_k[m]*cot(gamma_k[m]/(2*T))/2.0
 
@@ -77,7 +77,7 @@ def calc_s_msd(gamma_k, a_k, T, n_ltc):
         for k in range(n_k):
             inner -= 2/(nu_k[k]**2 - gamma_k[m]**2)
         s_delta += -2*T*a_k[m]*inner
-    
+
     result = {}
 
     result[(np.inf, 0)] = s_delta
@@ -85,8 +85,9 @@ def calc_s_msd(gamma_k, a_k, T, n_ltc):
         result[(gamma_k[k], 0)] = result.get((gamma_k[k], 0), 0) + s_k[k]
     for k in range(n_k):
         result[(nu_k[k], 0)] = result.get((nu_k[k], 0), 0) + s_k[k + n_m]
-    
+
     return result
+
 
 def calc_bath_corr_poles(J, T, type_ltc, **kwargs):
     """Return (S, A) pole dicts for the symmetric/antisymmetric bath correlation functions.
@@ -94,31 +95,31 @@ def calc_bath_corr_poles(J, T, type_ltc, **kwargs):
     type_ltc: 'none' (no LTC), 'msd' (Matsubara), 'psd' (Pade), or 'psd+fsd'.
     """
     type_ltc = type_ltc.lower()
-    
+
     if (type_ltc == 'none'):
         n_list = [[0, T, 1, 0]]
 
         return calc_s_from_poles(J.poles, n_list), calc_a_from_poles(J.poles)
-    
+
     elif (type_ltc == 'msd'):
         n_msd = kwargs['n_msd']
-        
+
         A = calc_a_from_poles(J.poles)
-        
+
         gamma_k = np.zeros(len(A), dtype=np.complex128)
         a_k     = np.zeros(len(A), dtype=np.complex128)
         for k, (gamma, l) in enumerate(A.keys()):
             if l != 0:
-                raise Exception('[Error] msd accepts only first-order poles')
+                raise ValueError('msd accepts only first-order poles')
             gamma_k[k] = gamma
             a_k[k]     = A[(gamma, 0)]
-            
+
         return calc_s_msd(gamma_k, a_k, T, n_msd), A
-    
+
     elif (type_ltc == 'psd'  or type_ltc == 'psd+fsd' ):
         coeffs = []
         coeff_0 = 0
-        
+
         if type_ltc == 'psd+fsd':
             n_fsd_rec = kwargs['n_fsd_rec']
             chi_fsd   = kwargs['chi_fsd']
@@ -133,12 +134,12 @@ def calc_bath_corr_poles(J, T, type_ltc, **kwargs):
             T_0 = T_n
         else:
             T_0 = T
-        
+
         # calc psd coeffs
         n_psd    = kwargs['n_psd']
         type_psd = kwargs['type_psd']
         xi, eta, R_1, T_3 = psd(n_psd, type_psd)
-        
+
         # collect poles
         poles = {}
         ## psd poles
@@ -149,17 +150,17 @@ def calc_bath_corr_poles(J, T, type_ltc, **kwargs):
             poles[(0, 0, 1)] = T_3
         for p in range(n_psd):
             poles[(T_0*xi[p], 1, 0)] = 2*eta[p]*T_0
-        
+
         ## fsd poles
         poles[(0, 1, 0)] += coeff_0
         for j, a, b, T_n in coeffs:
             poles[(T_n/a, j, 0)] = b*(T_n/a)**(2*j-1)
-        
+
         n_list = [[a, b, m, n] for (a, m, n), b in poles.items()]
-        
+
         return calc_s_from_poles(J.poles, n_list), calc_a_from_poles(J.poles)
     else:
-        raise Exception('[Error] Unknown ltc')
+        raise ValueError('Unknown ltc')
 
 
 def _poles_to_bath_corr(S, A):
@@ -175,18 +176,18 @@ def _poles_to_bath_corr(S, A):
         else:
             phi_deg_dict[gamma] = n + 1
     phi_dim = sum((n for n in phi_deg_dict.values()))
-    
-    # 
+
+    #
     phi   = []
     phi_0 = np.zeros((phi_dim), np.complex128)
     gamma = sp.sparse.lil_matrix((phi_dim, phi_dim), dtype=np.complex128)
     sigma = np.ones((phi_dim), np.complex128)
-    
+
     s_vec = np.zeros((phi_dim), np.complex128)
     a_vec = np.zeros((phi_dim), np.complex128)
     s_mat = sp.sparse.lil_matrix((phi_dim, phi_dim), dtype=np.complex128)
     a_mat = sp.sparse.lil_matrix((phi_dim, phi_dim), dtype=np.complex128)
-    
+
     idx   = 0
     for gamma_n, deg_max in phi_deg_dict.items():
         for deg in range(deg_max):
@@ -221,6 +222,7 @@ def _poles_to_bath_corr(S, A):
         s_delta = s_delta,
         a_mat   = a_mat,
     )
+
 
 def noise_decomposition(J, T, type_ltc, **kwargs):
     """Decompose the bath correlation function of J into exponential modes.

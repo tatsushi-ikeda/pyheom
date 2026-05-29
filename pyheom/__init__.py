@@ -3,7 +3,7 @@
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
 #  See LICENSE.txt for licence.
-# ------------------------------------------------------------------------*/
+# ------------------------------------------------------------------------
 
 from .spectral_density    import *
 from .noise_decomposition import *
@@ -36,11 +36,12 @@ __all__ = [
     'is_supported',
 ]
 
+
 def is_supported(engine):
     engine = engine.lower()
     func = getattr(libheom, f'{engine}_is_supported')
     if func:
         return func()
     else:
-        raise Exception(f'Unknown linalg_engine: {engine}')
+        raise ValueError(f'Unknown linalg_engine: {engine}')
 

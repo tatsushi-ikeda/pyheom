@@ -54,7 +54,6 @@ class coo_matrix_py
   }
 };
 
-
 template<typename dtype, order_t order, typename linalg_engine>
 void set_system_py(qme_base<dtype,order,linalg_engine>& obj,
                    coo_matrix_py<dtype>& H_py)
@@ -94,25 +93,24 @@ void set_noise_py(qme_base<dtype,order,linalg_engine>& obj,
   if (V_py.rows != obj.n_level) {
     throw std::runtime_error("[Error] Hamiltonian and noise operators must have the same dimension");
   }
-  
+
   V_py.dump(obj.V[u]);
-  
+
   obj.len_gamma[u] = static_cast<int>(gamma_py.rows);
   gamma_py.dump(obj.gamma[u]);
-  
+
   obj.phi_0[u].resize(obj.len_gamma[u]);
   std::copy_n(phi_0.data(), phi_0.shape(0), obj.phi_0[u].data());
-  
+
   obj.sigma[u].resize(obj.len_gamma[u]);
   std::copy_n(sigma.data(), sigma.shape(0), obj.sigma[u].data());
-  
+
   S_py.dump(obj.s_mat[u]);
 
   obj.s_delta[u] = s_delta;
 
   A_py.dump(obj.a_mat[u]);
 }
-
 
 template<typename dtype, order_t order, typename linalg_engine>
 void solve_py(qme_solver<dtype,order,linalg_engine>& obj,
@@ -277,7 +275,7 @@ PYBIND11_MODULE(pylibheom, m)
       .def("set_param",   &heom_ado<{{num}},{{dtype}},libheom::{{format}},{{order}},{{order_liou}},{{engine}}>::set_param)
       .def("get_n_hierarchy", &heom<{{dtype}},{{order}},{{engine}}>::get_n_hierarchy);
   {%           endfor %}
-  
+
   {%         endfor %}
   {%       endfor %}
 
@@ -289,7 +287,6 @@ PYBIND11_MODULE(pylibheom, m)
 
   py::class_<rkdp<{{dtype}},{{order}},{{engine}}>,solver_base<{{dtype}},{{order}},{{engine}}>>(m, "rkdp_{{dtype_symbol}}{{order_symbol}}_{{engine}}")
       .def(py::init<>());
-
 
   {%     endfor %}
   {%   endfor %}

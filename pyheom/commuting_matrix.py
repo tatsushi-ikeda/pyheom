@@ -3,10 +3,11 @@
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
 #  See LICENSE.txt for licence.
-# ------------------------------------------------------------------------*/
+# ------------------------------------------------------------------------
 
 import numpy as np
 import scipy as sp
+
 
 def get_commuting_matrix(c_vec, gamma, sigma):
     N = gamma.shape[0]
@@ -19,13 +20,14 @@ def get_commuting_matrix(c_vec, gamma, sigma):
         gammaT_n = gammaT_n.dot(gamma.T)
     basis_inv = np.linalg.solve(basis, np.identity(N, dtype=np.complex128))
     coeff = basis_inv@c_vec
-    
+
     gamma_n = np.identity(N, dtype=np.complex128)
     c_mat = np.zeros((N,N), dtype=np.complex128)
     for n in range(N):
         c_mat += coeff[n]*gamma_n
         gamma_n = gamma_n@gamma
     return c_mat
+
 
 def get_commuting_matrix_diag(c_vec, gamma, sigma):
     N = gamma.shape[0]

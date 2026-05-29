@@ -3,7 +3,7 @@
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
 #  See LICENSE.txt for licence.
-# ------------------------------------------------------------------------*/
+# ------------------------------------------------------------------------
 
 import numpy as np
 import scipy as sp
@@ -11,6 +11,7 @@ import scipy.sparse
 import pyheom.pylibheom as libheom
 
 from .const import *
+
 
 def libheom_coo_matrix(m):
     if isinstance(m, list):
