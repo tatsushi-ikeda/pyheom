@@ -133,6 +133,29 @@ class TestPSDAccuracyNm1:
 
 
 # ---------------------------------------------------------------------------
+# Approximation quality ((N+1)/N)
+# ---------------------------------------------------------------------------
+
+class TestPSDAccuracyNp1:
+
+    def test_n1_tolerance(self):
+        xi, eta, R_1, T_3 = psd(1, 'n+1/n')
+        assert max_error(xi, np.real(eta), R_1, T_3, T_TEST, OMEGA_RANGE) < 1e-3
+
+    def test_n3_tolerance(self):
+        xi, eta, R_1, T_3 = psd(3, 'n+1/n')
+        assert max_error(xi, np.real(eta), R_1, T_3, T_TEST, OMEGA_RANGE) < 1e-8
+
+    def test_monotone_improvement(self):
+        errors = []
+        for n_psd in [1, 2, 3]:
+            xi, eta, R_1, T_3 = psd(n_psd, 'n+1/n')
+            errors.append(max_error(xi, np.real(eta), R_1, T_3, T_TEST, OMEGA_RANGE))
+        for i in range(len(errors) - 1):
+            assert errors[i+1] < errors[i]
+
+
+# ---------------------------------------------------------------------------
 # Pinned values (regression)
 # ---------------------------------------------------------------------------
 
@@ -151,3 +174,15 @@ class TestPSDPinnedValues:
         xi, eta, R_1, T_3 = psd(0, 'n/n')
         assert len(xi) == 0
         assert R_1 == pytest.approx(1 / 12, rel=1e-10)
+
+    def test_np1_n1_pinned(self):
+        xi, eta, R_1, T_3 = psd(1, 'n+1/n')
+        assert float(np.real(xi[0])) == pytest.approx(6.3245553, rel=1e-6)
+        assert float(R_1) == pytest.approx(0.030423280, rel=1e-7)
+        assert float(T_3) == pytest.approx(-6.613757e-05, rel=1e-6)
+
+    def test_np1_residues_nonzero(self):
+        # N+1/N keeps both the omega and omega^3 residues (unlike N/N, (N-1)/N).
+        _, _, R_1, T_3 = psd(1, 'n+1/n')
+        assert R_1 != 0.0
+        assert T_3 != 0.0
