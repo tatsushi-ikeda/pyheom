@@ -33,10 +33,16 @@ pip install -e .
 
 For MKL and CUDA backends see [`docs/installation.md`](docs/installation.md).
 
-This [Google Colaboratory example](https://colab.research.google.com/github/tatsushi-ikeda/pyheom/blob/master/examples/colab/pyheom_example_2level_cpu.ipynb) may be helpful.
+These Google Colaboratory examples may be helpful.
 
+CPU:
 <a href="https://colab.research.google.com/github/tatsushi-ikeda/pyheom/blob/master/examples/colab/pyheom_example_2level_cpu.ipynb">
-<img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab">
+<img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab (CPU)">
+</a>
+
+GPU:
+<a href="https://colab.research.google.com/github/tatsushi-ikeda/pyheom/blob/master/examples/colab/pyheom_example_2level_gpu.ipynb">
+<img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab (GPU)">
 </a>
 
 ## Authors
