@@ -339,7 +339,10 @@ class QMESolver(ABC):
             Initial density matrix.  The 3-D form restarts from a full hierarchy
             state (e.g. obtained from a previous `rho_hierarchy` snapshot).
         t_list : array-like
-            Sequence of output times (user units).
+            Sequence of output times (user units).  Must be non-decreasing.
+            Equal consecutive times are allowed and return `rho` unchanged at the
+            repeated time (the callback still fires); a decreasing time raises
+            `ValueError`.
         callback : callable, optional
             Called at each output time with the current time as argument.
         e_ops : list of array-like, optional
@@ -354,6 +357,14 @@ class QMESolver(ABC):
         self._init_rho(rho_0)
 
         t_arr        = np.asarray(t_list, dtype=float)
+        diffs = np.diff(t_arr)
+        if np.any(diffs < 0):
+            bad = int(np.argmax(diffs < 0))
+            raise ValueError(
+                f't_list must be non-decreasing, but t_list[{bad + 1}] = '
+                f'{t_arr[bad + 1]} < t_list[{bad}] = {t_arr[bad]}. Equal '
+                f'consecutive times are allowed (rho is returned unchanged there).'
+            )
         expect_lists = [[] for _ in (e_ops or [])]
 
         # internal combined callback collects expectation values
