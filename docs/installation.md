@@ -13,7 +13,7 @@ Optional backends:
 
 ## Getting the source
 
-Clone the repository and initialise submodules (libheom, Eigen3, pybind11):
+Clone the repository and initialize submodules (libheom, Eigen3, pybind11):
 
 ```bash
 git clone https://github.com/tatsushi-ikeda/pyheom

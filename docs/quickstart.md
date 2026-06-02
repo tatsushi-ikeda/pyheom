@@ -15,7 +15,7 @@ omega_0  = 1.0    # vibrational frequency
 zeta     = 0.5    # damping constant
 T        = 1.0    # temperature
 
-# Renormalised frequency (shifts H due to the bath)
+# Renormalized frequency (shifts H due to the bath)
 omega_1 = np.sqrt(omega_0**2 - zeta**2 * 0.25)
 
 H = np.array([[omega_1, 0.0], [0.0, 0.0]], dtype=np.complex128)

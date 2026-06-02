@@ -43,7 +43,7 @@ SO_DEST="$ROOT_DIR/pyheom"
 CUDA_ARCH_LIST="${CUDA_ARCH_LIST:-70}"
 
 # ---------------------------------------------------------------------------
-# Module initialisation (non-interactive shells don't source .bashrc)
+# Module initialization (non-interactive shells don't source .bashrc)
 # ---------------------------------------------------------------------------
 if [ -f /etc/profile.d/modules.sh ]; then
     source /etc/profile.d/modules.sh

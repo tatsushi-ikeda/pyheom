@@ -2,7 +2,7 @@
 #  PyHEOM
 #  Copyright (c) Tatsushi Ikeda
 #  This library is distributed under BSD 3-Clause License.
-#  See LICENSE.txt for licence.
+#  See LICENSE.txt for license.
 # ------------------------------------------------------------------------
 
 from .spectral_density    import *
