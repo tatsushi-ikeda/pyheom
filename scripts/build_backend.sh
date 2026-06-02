@@ -31,6 +31,14 @@ if [ -f "$SCRIPT_DIR/local.env" ]; then
     source "$SCRIPT_DIR/local.env"
 fi
 
+# Local dev/test builds target the build host's full instruction set
+# (AVX/AVX2/AVX-512) for realistic performance and AVX test coverage. Override
+# with CXX_MARCH in scripts/local.env (e.g. CXX_MARCH="-march=x86-64-v3").
+# Distribution wheels stay portable: build_wheels.sh / pyproject use
+# -mno-avx512 and do NOT use this script.
+MARCH_FLAG="${CXX_MARCH:--march=native}"
+export CXXFLAGS="$MARCH_FLAG ${CXXFLAGS:-}"
+
 # ---------------------------------------------------------------------------
 # Derive build directories from the active Python interpreter
 # ---------------------------------------------------------------------------
