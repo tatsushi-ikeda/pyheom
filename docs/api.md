@@ -73,7 +73,9 @@ result = qme.solve(rho_0, t_list, callback=None, e_ops=None, dt=None)
 Evolve the system and return a `Result`.
 
 - `rho_0`: initial density matrix, shape `(n, n)` or `(storage_size, n, n)`.
-- `t_list`: sequence of output times (user units)
+- `t_list`: sequence of output times (user units); must be non-decreasing. Equal
+  consecutive times return `rho` unchanged at that time (the callback still
+  fires); a decreasing time raises `ValueError`.
 - `callback`: called with the current time at each output step
 - `e_ops`: list of operators; `Tr(O @ rho(t))` is recorded at every output time
 - `dt`: integration step size (user units; required for fixed-step solvers)
@@ -97,8 +99,8 @@ solver, info  = HEOMSolver.auto(H, noises, truncation_depth=5, return_info=True)
 solver        = RedfieldSolver.auto(H, noises)
 ```
 
-Automatically select the fastest engine, representation space, matrix format,
-and ODE solver for the given system by running short timing trials.
+Automatically select the fastest engine, representation space, and matrix format
+for the given system by running short timing trials.
 Returns a fully constructed solver instance ready for use.
 
 Valid spaces are restricted to those supported by the calling class:
@@ -111,7 +113,6 @@ Valid spaces are restricted to those supported by the calling class:
 - `engines`: engines to consider; default: all compiled engines
 - `spaces`: spaces to consider; default: all valid spaces for this class
 - `formats`: formats to consider; default: `['dense', 'sparse']`
-- `solvers`: ODE solvers to consider; default: `['lsrk4', 'rk4', 'rkdp']`
 - `dt`: step size for timing trials (default: `2.5e-3`)
 - `n_warmup_steps`: steps in each warmup call (default: `5`)
 - `n_timing_steps`: steps in each timing call (default: `20`)
@@ -121,6 +122,11 @@ Valid spaces are restricted to those supported by the calling class:
 - `verbose`: print one line per configuration tried (default: `False`)
 - `return_info`: if `True`, return `(solver, info_dict)` instead of just the solver
 - `**kwargs`: forwarded to the constructor (e.g. `truncation_depth` for `HEOMSolver`)
+
+The ODE solver is not part of the scan: it is held fixed and set with `solver=`
+in `**kwargs` (default `'lsrk4'`).  Choose it from your output-grid granularity
+(for a coarse output grid the adaptive `'rkdp'` can be much faster), not from the
+auto-scan trials, which use a small fixed `dt`.
 
 **Returns**
 
