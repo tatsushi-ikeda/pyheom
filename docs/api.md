@@ -21,7 +21,8 @@ Hierarchical equations of motion (HEOM) solver.
 - `format`: `'dense'` or `'sparse'`
 - `engine`: `'Eigen'` (default), `'MKL'`, or `'CUDA'`
 - `liouville_order`: `'C'` (row-major) or `'F'` (column-major)
-- `solver`: time integrator: `'rk4'`, `'lsrk4'` (default), or `'rkdp'`
+- `solver`: time integrator: `'rk4'`, `'lsrk4'` (default), or `'rkdp'`.
+  `'rkdp'` is an explicit adaptive method for NON-stiff dynamics.
 - `unrolling`: enable compile-time static template for `n_level` (default: `True`);
   effective only for `engine='Eigen'` with `n_level` in {2, 3, 4}; ignored by MKL and CUDA
 - `truncation_depth`: hierarchy truncation depth (required)
