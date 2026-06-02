@@ -30,7 +30,7 @@ corr = noise_decomposition(J, T=T, type_ltc='psd', n_psd=1, type_psd='n-1/n')
 corr.V = V   # attach the system-bath coupling operator
 ```
 
-`type_ltc='psd'` uses the Pade spectral decomposition for the low-temperature
+`type_ltc='psd'` uses the Pade spectrum decomposition for the low-temperature
 correction.
 
 ## Creating the solver

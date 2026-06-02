@@ -186,11 +186,18 @@ into a sum of exponential modes.
 - `T`: temperature
 - `type_ltc`: low-temperature correction method:
   - `'none'`: spectral density poles only
-  - `'msd'`: Matsubara spectral decomposition (`n_msd` terms)
-  - `'psd'`: Pade spectral decomposition (`n_psd` terms, `type_psd` variant)
-  - `'psd+fsd'`: Pade + Fano spectral decomposition
+  - `'msd'`: Matsubara spectrum decomposition (`n_msd` terms)
+  - `'psd'`: Pade spectrum decomposition (`n_psd` terms, `type_psd` variant)
+  - `'psd+fsd'`: Pade + Fano spectrum decomposition
 
 Returns a `BathCorrelation` instance.
+
+Pade spectrum decomposition:
+- J. Hu, M. Luo, F. Jiang, R.-X. Xu, and Y. Yan, *J. Chem. Phys.* **134**, 244106 (2011), https://doi.org/10.1063/1.3602466.
+
+Fano spectrum decomposition:
+- L. Cui, H.-D. Zhang, X. Zheng, R.-X. Xu, and Y. Yan, *J. Chem. Phys.* **151**, 024110 (2019), https://doi.org/10.1063/1.5096945;
+- H.-D. Zhang, L. Cui, H. Gong, R.-X. Xu, X. Zheng, and Y. Yan, *J. Chem. Phys.* **152**, 064107 (2020), https://doi.org/10.1063/1.5136093.
 
 ### `BathCorrelation`
 
@@ -205,6 +212,8 @@ Must have `.V` set before passing to a solver.
 - `a_mat`: antisymmetric correlation coefficient matrix, sparse `(K, K)`
 - `s_delta`: Markovian (delta-function) term, scalar; default `0.0`
 - `V`: system-bath coupling operator, shape `(n, n)`; must be set by the user
+
+See T. Ikeda and G. D. Scholes, *J. Chem. Phys.* **152**, 204101 (2020), https://doi.org/10.1063/5.0007327 (arXiv: https://arxiv.org/abs/2003.06134).
 
 **Direct construction**
 

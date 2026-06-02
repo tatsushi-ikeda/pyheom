@@ -68,7 +68,7 @@ def coeff_at(S, freq, l=0, tol=1e-9):
 
 
 # ---------------------------------------------------------------------------
-# msd (Matsubara spectral decomposition)
+# msd (Matsubara spectrum decomposition)
 # ---------------------------------------------------------------------------
 
 class TestMSD:
@@ -152,7 +152,7 @@ class TestCalcSMsd:
 
 
 # ---------------------------------------------------------------------------
-# psd (Pade spectral decomposition)
+# psd (Pade spectrum decomposition)
 # ---------------------------------------------------------------------------
 
 class TestPSD:
@@ -179,7 +179,7 @@ class TestPSD:
 
 
 # ---------------------------------------------------------------------------
-# psd+fsd (Pade with Fano spectral decomposition correction)
+# psd+fsd (Pade with Fano spectrum decomposition correction)
 # ---------------------------------------------------------------------------
 
 class TestPSDFSD:
