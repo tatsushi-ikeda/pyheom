@@ -6,9 +6,9 @@
 
 ```python
 HEOMSolver(H, noises, *, space='Hilbert', format='dense', engine='Eigen',
-            liouville_order='C', solver='lsrk4', unrolling=True, truncation_depth,
-            n_inner_threads=<auto>, n_outer_threads=1,
-            units=None, device=None)
+           liouville_order='C', solver='lsrk4', unrolling=True, truncation_depth,
+           n_inner_threads=<auto>, n_outer_threads=1,
+           units=None, device=None)
 ```
 
 Hierarchical equations of motion (HEOM) solver.
@@ -50,9 +50,9 @@ Hierarchical equations of motion (HEOM) solver.
 
 ```python
 RedfieldSolver(H, noises, *, space='Hilbert', format='dense', engine='Eigen',
-                liouville_order='C', solver='lsrk4', unrolling=True,
-                n_inner_threads=1, n_outer_threads=None,
-                units=None, device=None)
+               liouville_order='C', solver='lsrk4', unrolling=True,
+               n_inner_threads=1, n_outer_threads=None,
+               units=None, device=None)
 ```
 
 Redfield master equation solver (Born-Markov approximation, no ADO hierarchy).
