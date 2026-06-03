@@ -34,7 +34,7 @@ class BathCorrelation:
     """Bath correlation function decomposed into K exponential modes.
 
     Returned by `noise_decomposition`, or constructed directly for a known
-    decomposition C(t) = sum_k (s_k - i*a_k) exp(-gamma_k t) + s_delta*delta(t).
+    decomposition C(t) = sum_k (s_k + i*a_k) exp(-gamma_k t) + s_delta*delta(t).
     Set `V` before passing to a solver.  See `docs/api.md` for construction details.
     """
     gamma:   object         # scipy.sparse (K,K)

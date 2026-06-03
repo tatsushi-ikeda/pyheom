@@ -213,8 +213,8 @@ Can be returned by `noise_decomposition` or constructed directly (see below).
 Must have `.V` set before passing to a solver.
 
 - `gamma`: decay-rate matrix, sparse `(K, K)`; diagonal entries are the pole positions `gamma_k`
-- `sigma`: coupling vector, ndarray `(K,)`; use `ones(K)` for independent modes
-- `phi_0`: initial-value vector, ndarray `(K,)`; use `ones(K)` for independent modes
+- `sigma`: constant coefficient vector applied as `sigma^T` on the left of `C(t)`, ndarray `(K,)`
+- `phi_0`: initial vector of `phi(t) = expm(-gamma*t) * phi_0`, applied on the right of `C(t)`, ndarray `(K,)`
 - `s_mat`: symmetric correlation coefficient matrix, sparse `(K, K)`
 - `a_mat`: antisymmetric correlation coefficient matrix, sparse `(K, K)`
 - `s_delta`: Markovian (delta-function) term, scalar; default `0.0`
@@ -227,14 +227,14 @@ See T. Ikeda and G. D. Scholes, *J. Chem. Phys.* **152**, 204101 (2020), https:/
 Use this path when the decomposition is already known.  The general formula is:
 
 ```
-C(t) = phi_0^T * expm(-gamma * t) * (s_mat - i*a_mat) * sigma  +  s_delta * delta(t)
+C(t) = sigma^T * (s_mat + i*a_mat) * expm(-gamma * t) * phi_0  +  s_delta * delta(t)
 ```
 
 For K independent exponential modes (gamma and coefficient matrices diagonal,
 phi_0 = sigma = ones(K)), this reduces to:
 
 ```
-C(t) = sum_k (s_k - i*a_k) * exp(-gamma_k * t)  +  s_delta * delta(t)
+C(t) = sum_k (s_k + i*a_k) * exp(-gamma_k * t)  +  s_delta * delta(t)
 ```
 
 ```python
