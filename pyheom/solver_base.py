@@ -523,7 +523,7 @@ class QMESolver(ABC):
                             qme = cls(H, noises, engine=eng, space=sp,
                                       format=fmt, solver=fixed_solver,
                                       unrolling=unrolling, **kwargs)
-                        except AttributeError:
+                        except (AttributeError, MemoryError):
                             continue
 
                         # GPU memory guard: estimate RSS growth during warmup
@@ -532,7 +532,7 @@ class QMESolver(ABC):
                             before = _rss_bytes()
                             try:
                                 qme.solve(rho_0, t_warmup, **kw_solve)
-                            except Exception:
+                            except (AttributeError, MemoryError):
                                 continue
                             delta = max(0, _rss_bytes() - before)
                             if delta * 5 > gpu_free:
@@ -546,7 +546,7 @@ class QMESolver(ABC):
                         else:
                             try:
                                 qme.solve(rho_0, t_warmup, **kw_solve)
-                            except Exception:
+                            except (AttributeError, MemoryError):
                                 continue
 
                         # Thread tuning.  Eigen/MKL: 2-D sweep over
@@ -570,7 +570,7 @@ class QMESolver(ABC):
                                             unrolling=unrolling,
                                             n_outer_threads=n_outer,
                                             n_inner_threads=n_inner, **kwargs)
-                                except (AttributeError, KeyError):
+                                except (AttributeError, KeyError, MemoryError):
                                     continue
                                 q.solve(rho_0, t_warmup, **kw_solve)
                                 t = _trial(q)
