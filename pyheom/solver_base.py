@@ -457,12 +457,23 @@ class QMESolver(ABC):
             Print progress lines.
         return_info : bool
             If True, return (solver, info_dict) instead of just solver.
+        prune_infeasible : bool, default True
+            Skip combinations whose estimated memory exceeds available
+            memory (GPU for cuda, host for eigen/mkl).  Set False to
+            attempt every combination.
+        trial_timeout : float or None, default 60.0
+            Per-combination time budget (seconds).  Trials whose timing-
+            trial cost projects to more than this from the warmup elapsed
+            are skipped.  Set None to disable.
         **kwargs
             Extra arguments forwarded to the constructor
             (e.g. truncation_depth for HEOMSolver, solver= to fix the ODE solver).
         """
         import pyheom.pylibheom as _lb
-        from ._auto import (_gpu_free_bytes, _thread_candidates,
+        from ._auto import (_gpu_free_bytes, _host_available_bytes,
+                            _estimate_n_hierarchy,
+                            _estimate_combination_bytes,
+                            _thread_candidates,
                             _thread_pair_candidates, _solve_kwargs)
         import time
 
@@ -498,7 +509,17 @@ class QMESolver(ABC):
         fixed_solver = kwargs.pop('solver', 'lsrk4')
         kw_solve = _solve_kwargs(fixed_solver, dt)
 
-        gpu_free = _gpu_free_bytes()
+        trial_timeout = kwargs.pop('trial_timeout', 60.0)
+        prune_infeasible = kwargs.pop('prune_infeasible', True)
+        if prune_infeasible:
+            n_hier_est = _estimate_n_hierarchy(
+                noises, kwargs.get('truncation_depth', 0))
+            gpu_free = _gpu_free_bytes()
+            host_avail = _host_available_bytes()
+        else:
+            n_hier_est = None
+            gpu_free = None
+            host_avail = None
 
         rho_0 = np.zeros((n_level,) * 2, dtype=H.dtype)
         rho_0[0, 0] = 1.0
@@ -514,40 +535,65 @@ class QMESolver(ABC):
             return time.perf_counter() - t0
 
         results = []
+        n_total_trials = 0
+        n_pruned = 0
+        n_timed_out = 0
+        n_failed = 0
+        min_predicted_timeout = None
 
         for eng in engines:
             for sp in spaces:
                 for fmt in formats:
                     for unrolling in _engine_unrollings(eng):
+                        n_total_trials += 1
+                        if prune_infeasible:
+                            est = _estimate_combination_bytes(
+                                sp, fmt, n_level, n_hier_est)
+                            avail = gpu_free if eng == 'cuda' else host_avail
+                            if avail is not None and est > 0.9 * avail:
+                                n_pruned += 1
+                                if verbose:
+                                    unrl_tag = 'on' if unrolling else 'off'
+                                    side = 'GPU' if eng == 'cuda' else 'host'
+                                    print(f'  SKIP {eng}/{sp}/{fmt}'
+                                          f'/unroll={unrl_tag}: '
+                                          f'est. {est/1024**2:.0f} MiB '
+                                          f'> {0.9 * avail / 1024**2:.0f} MiB '
+                                          f'{side} available')
+                                continue
                         try:
                             qme = cls(H, noises, engine=eng, space=sp,
                                       format=fmt, solver=fixed_solver,
                                       unrolling=unrolling, **kwargs)
                         except (AttributeError, MemoryError):
+                            n_failed += 1
                             continue
 
-                        # GPU memory guard: estimate RSS growth during warmup
-                        if eng == 'cuda' and gpu_free is not None:
-                            from ._auto import _rss_bytes
-                            before = _rss_bytes()
-                            try:
-                                qme.solve(rho_0, t_warmup, **kw_solve)
-                            except (AttributeError, MemoryError):
-                                continue
-                            delta = max(0, _rss_bytes() - before)
-                            if delta * 5 > gpu_free:
-                                if verbose:
-                                    unrl_tag = 'on' if unrolling else 'off'
-                                    print(f'  SKIP {eng}/{sp}/{fmt}'
-                                          f'/unroll={unrl_tag}: '
-                                          f'est. {delta*5/1024**2:.0f} MiB '
-                                          f'> {gpu_free/1024**2:.0f} MiB GPU free')
-                                continue
-                        else:
-                            try:
-                                qme.solve(rho_0, t_warmup, **kw_solve)
-                            except (AttributeError, MemoryError):
-                                continue
+                        t_warm_start = time.perf_counter()
+                        try:
+                            qme.solve(rho_0, t_warmup, **kw_solve)
+                        except (AttributeError, MemoryError):
+                            n_failed += 1
+                            continue
+                        warm_elapsed = time.perf_counter() - t_warm_start
+
+                        predicted_timing = (
+                            n_trials
+                            * (n_timing_steps / max(n_warmup_steps, 1))
+                            * warm_elapsed)
+                        if trial_timeout is not None and trial_timeout > 0 \
+                                and predicted_timing > trial_timeout:
+                            n_timed_out += 1
+                            if (min_predicted_timeout is None
+                                    or predicted_timing < min_predicted_timeout):
+                                min_predicted_timeout = predicted_timing
+                            if verbose:
+                                unrl_tag = 'on' if unrolling else 'off'
+                                print(f'  TIMEOUT {eng}/{sp}/{fmt}'
+                                      f'/unroll={unrl_tag}: '
+                                      f'~{predicted_timing:.0f}s '
+                                      f'> {trial_timeout:g}s')
+                            continue
 
                         # Thread tuning.  Eigen/MKL: 2-D sweep over
                         # (n_outer, n_inner) pairs.  n_outer controls the
@@ -598,10 +644,34 @@ class QMESolver(ABC):
 
         results.sort(key=lambda x: x['elapsed'])
         if not results:
-            raise RuntimeError(
-                f'{cls.__name__}.auto(): no valid engine/space/format '
-                'combination found for this build.'
-            )
+            head = f'{cls.__name__}.auto():'
+            if n_timed_out == n_total_trials:
+                parts = [f'{head} all {n_total_trials} trials timed out.']
+            elif n_pruned == n_total_trials:
+                parts = [f'{head} all {n_total_trials} trials pruned by '
+                         f'memory guard.']
+            elif n_failed == n_total_trials:
+                parts = [f'{head} all {n_total_trials} trials failed.']
+            else:
+                bits = []
+                if n_pruned:
+                    bits.append(f'{n_pruned} pruned')
+                if n_timed_out:
+                    bits.append(f'{n_timed_out} timed out')
+                if n_failed:
+                    bits.append(f'{n_failed} failed')
+                parts = [f'{head} no viable trial out of {n_total_trials} '
+                         f'({", ".join(bits)}).']
+            if (trial_timeout is not None and trial_timeout > 0
+                    and min_predicted_timeout is not None):
+                suggested = int(min_predicted_timeout) + 1
+                parts.append(
+                    f'Raise trial_timeout to at least {suggested}s '
+                    f'(currently {trial_timeout:g}s).'
+                )
+            elif n_pruned == n_total_trials:
+                parts.append('Set prune_infeasible=False to attempt them.')
+            raise RuntimeError(' '.join(parts))
 
         best = results[0]
         if return_info:

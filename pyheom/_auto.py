@@ -9,6 +9,7 @@
 import os
 import subprocess
 import time
+from math import comb
 import numpy as np
 from multiprocessing import cpu_count
 
@@ -40,6 +41,53 @@ def _gpu_free_bytes():
         return int(out) * 1024 * 1024
     except Exception:
         return None
+
+
+def _host_available_bytes():
+    """Host memory available without paging, in bytes; None if unavailable.
+
+    Prefers psutil (cross-platform: Linux MemAvailable, macOS vm_stat,
+    Windows GlobalMemoryStatusEx). Falls back to /proc/meminfo on Linux.
+    """
+    try:
+        import psutil
+        return int(psutil.virtual_memory().available)
+    except ImportError:
+        pass
+    try:
+        with open('/proc/meminfo') as f:
+            for line in f:
+                if line.startswith('MemAvailable:'):
+                    return int(line.split()[1]) * 1024
+    except OSError:
+        pass
+    return None
+
+
+def _estimate_n_hierarchy(noises, truncation_depth):
+    """Estimate the HEOM hierarchy node count without building the solver."""
+    K = sum(c.gamma.shape[0] for c in noises)
+    return comb(K + truncation_depth, truncation_depth)
+
+
+_ADO_SPARSE_BYTES_MULT     = 200
+_HILBERT_LIOUVILLE_BYTES_MULT = 8
+
+
+def _estimate_combination_bytes(space, fmt, n_level, n_hierarchy, dtype_size=16):
+    """Conservative byte estimate for the dominant storage of a trial.
+
+    Used by HEOMSolver.auto() to skip combinations that would overrun
+    available memory before constructing them. Overestimates intentionally
+    so the prune never skips a combination that would have built.
+    """
+    n_level_2 = n_level * n_level
+    if space == 'ado':
+        if fmt == 'dense':
+            n_level_ado = n_hierarchy * n_level_2
+            return n_level_ado * n_level_ado * dtype_size
+        return _ADO_SPARSE_BYTES_MULT * n_hierarchy * n_level_2 * dtype_size
+    return _HILBERT_LIOUVILLE_BYTES_MULT * n_hierarchy * n_level_2 * dtype_size
 
 
 def _thread_candidates():
